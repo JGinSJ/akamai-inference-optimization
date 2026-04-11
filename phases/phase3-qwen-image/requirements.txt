@@ -1,0 +1,23 @@
+# Core inference
+torch>=2.4
+torchvision>=0.19
+transformers>=4.45,<5.0
+accelerate>=0.26
+Pillow>=10.0
+
+# Qwen vision utilities (published by the Qwen team)
+qwen-vl-utils>=0.0.8
+
+# Serving
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.0
+
+# Testing
+pytest>=7.0
+
+# EXPERIMENTAL: Flash Attention 2
+# Not installed by default — requires a CUDA toolchain and C++ compiler.
+# Install separately after the above:
+#   pip install flash-attn --no-build-isolation
+# See serve/model_optimized.py for usage.

@@ -1,0 +1,45 @@
+# Akamai LKE GPU node pool configuration
+#
+# PLACEHOLDER — This file documents the intended node pool spec.
+# Akamai LKE node pools are created via the Linode API, Terraform, or the
+# Cloud Manager UI, not via kubectl.  The YAML format here is for reference
+# only and cannot be applied with kubectl apply.
+#
+# TODO: Replace all PLACEHOLDER values with the correct Linode GPU plan slugs
+# once hardware is provisioned.  See:
+#   https://www.linode.com/docs/products/compute/kubernetes/
+#   linode api get /linode/types   (to list available GPU plan IDs)
+#
+# Linode API equivalent:
+#   POST /lke/clusters/{clusterId}/pools
+#   {
+#     "type": "<LINODE_GPU_PLAN_ID>",
+#     "count": 1,
+#     "labels": { "akamai.com/gpu-node-pool": "<pool-name>" }
+#   }
+#
+# RTX 4000 Ada pool (Phase 3 / Phase 4)
+# --------------------------------------
+# Plan ID  : PLACEHOLDER (e.g. "gpu-rtx4000ada-1" — confirm with Linode API)
+# VRAM     : PLACEHOLDER GB   (see docs/hardware.md)
+# vCPUs    : PLACEHOLDER
+# RAM      : PLACEHOLDER GB
+# Count    : 1 node (scale for Phase 4 multi-GPU benchmarks)
+#
+# RTX PRO 6000 Blackwell pool (Phase 4)
+# ---------------------------------------
+# Plan ID  : PLACEHOLDER (e.g. "gpu-rtxpro6000-1" — confirm with Linode API)
+# VRAM     : PLACEHOLDER GB   (see docs/hardware.md)
+# vCPUs    : PLACEHOLDER
+# RAM      : PLACEHOLDER GB
+# Count    : 1 node
+#
+# Recommended node labels to set in the pool:
+#   akamai.com/gpu-node-pool: rtx4000ada    (or rtxpro6000)
+#   nvidia.com/gpu.product:   <product-name>
+#
+# These labels are referenced in k8s/deployment.yaml nodeSelector.
+
+# NOTE: The Linode Kubernetes Engine NVIDIA device plugin is pre-installed
+# on GPU node pools.  No additional DaemonSet installation is required.
+# Verify with: kubectl describe node <gpu-node> | grep nvidia.com/gpu

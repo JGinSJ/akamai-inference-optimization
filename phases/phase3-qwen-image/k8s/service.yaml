@@ -1,0 +1,26 @@
+# Qwen-Image inference server — LKE Service
+#
+# ClusterIP: accessible only within the cluster.
+# To expose externally, change type to LoadBalancer (Akamai LKE provisions
+# a NodeBalancer automatically) or use an Ingress.
+#
+# Apply with:
+#   kubectl apply -f k8s/service.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen-image-svc
+  namespace: inference
+  labels:
+    app: qwen-image
+    phase: "3"
+spec:
+  type: ClusterIP
+  selector:
+    app: qwen-image
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP

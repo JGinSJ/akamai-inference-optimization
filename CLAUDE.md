@@ -39,7 +39,7 @@ Never deviate from these.
 |-------|------|--------|
 | 1 | KV Cache from Scratch (PyTorch) | Complete |
 | 2 | Fermyon + Valkey + vLLM Prefix Caching | Complete (deploy pending live cluster) |
-| 3 | Qwen-Image Inference on Akamai Cloud | Not started |
+| 3 | Qwen-Image Inference on Akamai Cloud | Complete (GPU deploy pending) |
 | 4 | Multi-GPU Benchmarking and Cost Model | Not started |
 
 Update the Status column as phases are completed.

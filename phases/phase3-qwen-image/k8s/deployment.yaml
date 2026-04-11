@@ -1,0 +1,107 @@
+# Qwen-Image inference server — LKE Deployment + Service
+#
+# Before applying:
+#   1. Build and push the container image to a registry accessible from LKE.
+#      TODO: Define a Dockerfile for this phase (out of scope for Phase 3
+#      scaffold — add alongside CI/CD work tracked in CLAUDE.md open question #1).
+#   2. Set MODEL_NAME in the ConfigMap below.
+#   3. Set the nodeSelector label matching your LKE GPU node pool.
+#   4. Create the vllm-model-cache PVC (or rename it) for HuggingFace cache.
+#
+# Apply with:
+#   kubectl apply -f k8s/deployment.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: inference
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qwen-image-config
+  namespace: inference
+  labels:
+    app: qwen-image
+    phase: "3"
+data:
+  # TODO: Set once GPU VRAM is confirmed. See docs/hardware.md and
+  # serve/model.py for variant sizing guidance.
+  MODEL_NAME: "Qwen/Qwen2.5-VL-7B-Instruct"
+  MAX_NEW_TOKENS: "256"
+  MAX_BATCH_SIZE: "1"
+  MAX_WAIT_S: "0.05"
+
+  # Optimized path (EXPERIMENTAL) — all off by default.
+  # Set to "1" individually to enable each optimization.
+  # Measure with benchmark/ before enabling in production.
+  USE_OPTIMIZED: "0"
+  USE_FLASH_ATTN: "0"
+  USE_BFLOAT16: "0"
+  USE_TORCH_COMPILE: "0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen-image
+  namespace: inference
+  labels:
+    app: qwen-image
+    phase: "3"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen-image
+  template:
+    metadata:
+      labels:
+        app: qwen-image
+    spec:
+      # TODO: Replace with the GPU node pool label for your LKE cluster.
+      # RTX 4000 Ada or RTX PRO 6000 Blackwell node pool.
+      nodeSelector:
+        akamai.com/gpu-node-pool: "TODO"
+
+      containers:
+        - name: qwen-image
+          # TODO: Replace with your built and pushed image.
+          image: "PLACEHOLDER/qwen-image-server:latest"
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: qwen-image-config
+          command: ["uvicorn", "serve.app:app", "--host", "0.0.0.0", "--port", "8080"]
+          resources:
+            requests:
+              cpu: "4"
+              memory: "24Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              nvidia.com/gpu: "1"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            # Long initial delay — model loading takes time
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            failureThreshold: 5
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        # Persistent volume so model weights survive pod restarts.
+        # TODO: Create a PVC named qwen-image-hf-cache in your LKE cluster.
+        - name: hf-cache
+          persistentVolumeClaim:
+            claimName: qwen-image-hf-cache
