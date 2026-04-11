@@ -1,0 +1,20 @@
+[project]
+name = "akamai-inference-optimization"
+version = "0.1.0"
+description = "Zero-Waste Inference on Akamai Cloud — computation reuse across KV cache, prefix cache, image inference, and multi-GPU benchmarking"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+
+# Phase-specific dependencies are declared in each phases/ subdirectory.
+# This file is the root workspace marker only.
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/infernostra/akamai-inference-optimization"
+
+[tool.pytest.ini_options]
+testpaths = ["phases"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
