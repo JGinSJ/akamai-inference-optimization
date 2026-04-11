@@ -181,9 +181,9 @@ async fn handle(req: Request) -> anyhow::Result<impl IntoResponse> {
     let vllm_resp: Response = spin_sdk::http::send(vllm_req).await?;
     let vllm_status = vllm_resp.status();
 
-    if vllm_status != 200 {
+    if *vllm_status != 200 {
         return Ok(error_response(
-            vllm_status,
+            *vllm_status,
             &format!("upstream vLLM returned HTTP {vllm_status}"),
         ));
     }
