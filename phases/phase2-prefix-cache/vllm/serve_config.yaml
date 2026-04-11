@@ -1,0 +1,63 @@
+# vLLM serving configuration for Phase 2
+#
+# These arguments are passed to the vLLM OpenAI-compatible server.
+# They are referenced by vllm.yaml via the VLLM_ARGS environment variable,
+# or can be passed directly on the command line:
+#
+#   python -m vllm.entrypoints.openai.api_server \
+#       --model <TODO> \
+#       --enable-prefix-caching \
+#       --port 8000 \
+#       --host 0.0.0.0
+#
+# ---------------------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------------------
+# TODO: Set the model path or HuggingFace hub ID once GPU VRAM is confirmed.
+# See docs/hardware.md for GPU specs.
+# Examples:
+#   model: "meta-llama/Llama-3.1-8B-Instruct"     # ~16 GB FP16
+#   model: "Qwen/Qwen2.5-7B-Instruct"             # ~14 GB FP16
+#   model: "microsoft/Phi-3-mini-4k-instruct"      # ~8 GB FP16
+model: "PLACEHOLDER"
+
+# ---------------------------------------------------------------------------
+# Prefix caching — the core of Phase 2
+# ---------------------------------------------------------------------------
+# Tells vLLM to maintain a GPU-side KV cache keyed by prompt prefix hash.
+# Requests that share a prompt prefix reuse the already-computed KV states,
+# reducing GPU work proportionally to the prefix length.
+enable_prefix_caching: true
+
+# ---------------------------------------------------------------------------
+# Server
+# ---------------------------------------------------------------------------
+host: "0.0.0.0"
+port: 8000
+
+# ---------------------------------------------------------------------------
+# GPU memory
+# ---------------------------------------------------------------------------
+# Fraction of GPU VRAM reserved for the KV cache. The rest is used for model
+# weights. Tune this based on your model size and sequence lengths.
+# TODO: Adjust after measuring model footprint on RTX 4000 Ada and
+# RTX PRO 6000 Blackwell. See docs/hardware.md.
+gpu_memory_utilization: 0.90
+
+# ---------------------------------------------------------------------------
+# Batching
+# ---------------------------------------------------------------------------
+max_num_seqs: 256
+max_num_batched_tokens: 8192
+
+# ---------------------------------------------------------------------------
+# Quantization
+# ---------------------------------------------------------------------------
+# TODO: Enable quantization once model and GPU are confirmed.
+# Options: "awq", "gptq", "fp8" (Blackwell only), null (FP16 default)
+quantization: null
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+disable_log_requests: false

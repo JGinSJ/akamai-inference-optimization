@@ -1,0 +1,136 @@
+# vLLM — LKE deployment for Phase 2 prefix caching backend
+#
+# The key flag is --enable-prefix-caching, which tells vLLM to maintain a
+# GPU-side KV cache keyed by prompt prefix hash.  Requests that share a
+# prompt prefix reuse the already-computed KV states.
+#
+# TODO: Set MODEL_NAME to a real model before deploying.
+#       See vllm/serve_config.yaml for model selection guidance.
+# TODO: Set the correct GPU node selector label for your LKE GPU node pool.
+#
+# Apply with:
+#   kubectl apply -f vllm/vllm.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: inference
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-config
+  namespace: inference
+  labels:
+    app: vllm
+    phase: "2"
+data:
+  # TODO: Replace PLACEHOLDER with the actual HuggingFace model ID or local
+  # model path once GPU VRAM is confirmed.  See docs/hardware.md and
+  # vllm/serve_config.yaml for sizing guidance.
+  MODEL_NAME: "PLACEHOLDER"
+  MAX_NUM_SEQS: "256"
+  MAX_NUM_BATCHED_TOKENS: "8192"
+  GPU_MEMORY_UTILIZATION: "0.90"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm
+  namespace: inference
+  labels:
+    app: vllm
+    phase: "2"
+spec:
+  # Single replica for Phase 2.  Scale horizontally once model and load are
+  # characterised in Phase 4.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm
+  template:
+    metadata:
+      labels:
+        app: vllm
+    spec:
+      # TODO: Replace with the actual GPU node pool label used in your LKE
+      # cluster.  On Akamai LKE, GPU node pools are commonly labelled with
+      # the Linode type slug (e.g. gpu-rtx4000ada-1).
+      nodeSelector:
+        akamai.com/gpu-node-pool: "TODO"
+
+      containers:
+        - name: vllm
+          # TODO: Pin to a specific vLLM release tag before deploying to
+          # production.  "latest" is used here for scaffolding convenience.
+          image: vllm/vllm-openai:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: vllm-config
+          command:
+            - python
+            - -m
+            - vllm.entrypoints.openai.api_server
+          args:
+            - "--model=$(MODEL_NAME)"
+            - "--enable-prefix-caching"
+            - "--host=0.0.0.0"
+            - "--port=8000"
+            - "--gpu-memory-utilization=$(GPU_MEMORY_UTILIZATION)"
+            - "--max-num-seqs=$(MAX_NUM_SEQS)"
+            - "--max-num-batched-tokens=$(MAX_NUM_BATCHED_TOKENS)"
+          resources:
+            requests:
+              cpu: "4"
+              memory: "24Gi"
+              # One GPU per pod.  Targets RTX 4000 Ada or RTX PRO 6000 Blackwell
+              # as configured in the node pool.
+              nvidia.com/gpu: "1"
+            limits:
+              nvidia.com/gpu: "1"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 5
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        # Persistent volume for downloaded model weights so that pod restarts
+        # do not re-download the model.
+        # TODO: Create a PVC named vllm-model-cache in your LKE cluster with
+        # sufficient capacity for your chosen model.
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: vllm-model-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-svc
+  namespace: inference
+  labels:
+    app: vllm
+    phase: "2"
+spec:
+  type: ClusterIP
+  selector:
+    app: vllm
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP

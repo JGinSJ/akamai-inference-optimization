@@ -1,0 +1,46 @@
+spin_manifest_version = 2
+
+[application]
+name = "prefix-cache-handler"
+version = "0.1.0"
+description = "Fermyon Wasm front door for Akamai prefix-cache inference pipeline"
+
+# ---------------------------------------------------------------------------
+# Application-level variables
+# Set these at deploy time:
+#   spin deploy --variable valkey_address=redis://valkey-svc:6379 \
+#               --variable vllm_url=http://vllm-svc:8000
+# Or export SPIN_VARIABLE_VALKEY_ADDRESS=... before `spin up`
+# ---------------------------------------------------------------------------
+[variables]
+valkey_address = { required = true }
+vllm_url       = { required = true }
+# Number of *characters* (not bytes) of the prompt to use as the cache prefix.
+# Increase for more specificity; decrease for higher hit rates.
+# TODO(semantic-cache): this parameter becomes irrelevant once embedding-based
+# similarity replaces exact-match hashing — see README.md.
+prefix_chars = { default = "128" }
+
+# ---------------------------------------------------------------------------
+# HTTP trigger — all POST /v1/completions requests are handled by this component
+# ---------------------------------------------------------------------------
+[[trigger.http]]
+route     = "/v1/completions"
+component = "prefix-cache-handler"
+
+[component.prefix-cache-handler]
+# After `cargo build --target wasm32-wasip1 --release` from the fermyon/ directory
+source = "target/wasm32-wasip1/release/prefix_cache_handler.wasm"
+
+# TODO(prod): tighten to specific Valkey and vLLM hostnames before deploying
+# to a production Fermyon environment.
+allowed_outbound_hosts = [
+    "redis://*:*",
+    "http://*:*",
+    "https://*:*",
+]
+
+[component.prefix-cache-handler.variables]
+valkey_address = "{{ valkey_address }}"
+vllm_url       = "{{ vllm_url }}"
+prefix_chars   = "{{ prefix_chars }}"

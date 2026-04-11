@@ -1,0 +1,21 @@
+[package]
+name = "prefix-cache-handler"
+version = "0.1.0"
+edition = "2021"
+description = "Fermyon Wasm front door for Akamai prefix-cache inference pipeline"
+
+# Must be cdylib to compile to a Wasm component
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+spin-sdk = "3.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+anyhow = "1"
+
+[profile.release]
+# Optimise for binary size — Wasm cold-start is sensitive to artifact size
+opt-level = "s"
+strip = true

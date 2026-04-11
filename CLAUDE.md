@@ -38,7 +38,7 @@ Never deviate from these.
 | Phase | Name | Status |
 |-------|------|--------|
 | 1 | KV Cache from Scratch (PyTorch) | Complete |
-| 2 | Fermyon + Valkey + vLLM Prefix Caching | Not started |
+| 2 | Fermyon + Valkey + vLLM Prefix Caching | Complete (deploy pending live cluster) |
 | 3 | Qwen-Image Inference on Akamai Cloud | Not started |
 | 4 | Multi-GPU Benchmarking and Cost Model | Not started |
 
@@ -89,3 +89,4 @@ neatly into the open questions log.
 - 2026-04-10: Pure Markdown for all docs.
 - 2026-04-10: Apache 2.0 license selected.
 - 2026-04-10: hardware.md GPU specs stubbed as PLACEHOLDER pending real data.
+- 2026-04-11: Phase 2 scaffold complete. Valkey standalone, Fermyon Rust (spin-sdk 3), vLLM prefix caching. Semantic caching marked TODO throughout.

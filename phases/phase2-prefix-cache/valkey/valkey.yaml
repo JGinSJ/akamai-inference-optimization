@@ -1,0 +1,100 @@
+# Valkey 8.x — LKE deployment for Phase 2 prefix cache
+#
+# Deploys a single standalone Valkey pod.
+# TODO(prod): Replace with a StatefulSet + PVC for persistence, or a
+# Valkey cluster for horizontal scale.  See valkey/config/valkey.conf.
+#
+# Apply with:
+#   kubectl apply -f valkey/valkey.yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: valkey-config
+  namespace: inference
+  labels:
+    app: valkey
+    phase: "2"
+data:
+  valkey.conf: |
+    bind 0.0.0.0
+    port 6379
+    protected-mode no
+    maxmemory 2gb
+    maxmemory-policy allkeys-lru
+    save ""
+    appendonly no
+    maxclients 1000
+    timeout 0
+    loglevel notice
+    logfile ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: inference
+  labels:
+    app: valkey
+    phase: "2"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valkey
+  template:
+    metadata:
+      labels:
+        app: valkey
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.0-alpine
+          ports:
+            - containerPort: 6379
+              name: valkey
+          # Pass the config file from the ConfigMap
+          command: ["valkey-server", "/etc/valkey/valkey.conf"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/valkey
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "2.5Gi"
+            limits:
+              cpu: "1"
+              memory: "3Gi"
+          livenessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: valkey-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey-svc
+  namespace: inference
+  labels:
+    app: valkey
+    phase: "2"
+spec:
+  type: ClusterIP
+  selector:
+    app: valkey
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
