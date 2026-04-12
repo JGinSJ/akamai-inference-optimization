@@ -58,8 +58,9 @@ Each phase targets a different level of the stack:
 3. **Request deduplication** (Phase 2, Fermyon layer) — short-circuit
    semantically identical requests at the edge before they reach the GPU.
 
-4. **Multi-GPU scheduling** (Phase 4) — route requests to the right GPU
-   tier (throughput-optimized vs latency-optimized) to minimise idle compute.
+4. **Multi-GPU benchmarking** (Phase 4) — measure throughput and cost on
+   each GPU tier to inform tensor-parallel vs data-parallel deployment
+   decisions and produce a reproducible cost-per-token model.
 
 ## Akamai LKE cluster topology
 

@@ -1,0 +1,11 @@
+# Benchmark harness
+aiohttp>=3.9
+pyyaml>=6.0
+numpy>=1.26
+
+# Reporting
+tabulate>=0.9
+
+# Testing
+pytest>=7.0
+pytest-asyncio>=0.23

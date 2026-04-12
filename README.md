@@ -45,16 +45,29 @@ akamai-inference-optimization/
 
 ## Quick start
 
-> TODO: Fill in once Phase 1 is complete.
-
 Each phase is self-contained. Navigate to the relevant `phases/` directory
 and follow the README there.
 
 ```bash
-# Example (Phase 1 — available after Phase 1 implementation)
+# Phase 1 — KV cache demo (CPU, no GPU required)
 cd phases/phase1-kv-cache
 pip install -r requirements.txt
 python demo.py
+
+# Phase 2 — prefix cache tests (no live cluster required)
+cd phases/phase2-prefix-cache
+pip install -r benchmark/requirements.txt
+python -m pytest tests/ -v
+
+# Phase 3 — infrastructure tests (no GPU required)
+cd phases/phase3-qwen-image
+pip install "transformers>=4.45,<5.0" Pillow fastapi uvicorn pydantic pytest
+python -m pytest tests/ -v
+
+# Phase 4 — cost model tests (no GPU or network required)
+cd phases/phase4-benchmarks
+pip install -r requirements.txt
+python -m pytest tests/ -v
 ```
 
 ## Phases at a glance
@@ -77,15 +90,18 @@ See [docs/phases/phase2-fermyon-valkey.md](docs/phases/phase2-fermyon-valkey.md)
 
 ### Phase 3 — Qwen-Image Inference on Akamai Cloud
 
-End-to-end image model serving using Qwen-Image, deployed to Akamai LKE
-with GPU node pools. Covers model loading, batching, and request routing.
+End-to-end image-language model serving using Qwen2.5-VL, deployed to
+Akamai LKE with GPU node pools. Covers model loading, dynamic batching,
+baseline and optimised serving paths, and request routing.
 
 See [docs/phases/phase3-qwen-image.md](docs/phases/phase3-qwen-image.md).
 
 ### Phase 4 — Multi-GPU Benchmarking and Cost Model
 
 Head-to-head throughput and cost comparison between RTX 4000 Ada and
-RTX PRO 6000 Blackwell on Akamai Cloud. Produces a reproducible cost model.
+RTX PRO 6000 Blackwell on Akamai Cloud. Includes a vLLM tensor-parallel
+deployment path, an async load generator, and a cost model that converts
+GPU-hour pricing to cost-per-token and cost-per-million-tokens CSV outputs.
 
 See [docs/phases/phase4-benchmarks.md](docs/phases/phase4-benchmarks.md).
 

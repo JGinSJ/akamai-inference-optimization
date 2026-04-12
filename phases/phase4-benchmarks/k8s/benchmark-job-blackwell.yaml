@@ -1,0 +1,78 @@
+# K8s Job — run the Phase 4 benchmark harness against the RTX PRO 6000 Blackwell node.
+#
+# TODO: Set image, nodeSelector, and vllm_url before running.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: benchmark-blackwell
+  namespace: inference
+  labels:
+    phase: "4"
+    gpu: rtx-pro-6000-blackwell
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+
+      nodeSelector:
+        gpu-type: PLACEHOLDER   # TODO: RTX PRO 6000 Blackwell node pool label
+
+      containers:
+        - name: benchmark
+          image: PLACEHOLDER
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - python
+            - -m
+            - harness.run_benchmark
+            - --config
+            - /config/rtxpro6000.yaml
+            - --results-dir
+            - /results
+
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: results
+              mountPath: /results
+
+      volumes:
+        - name: config
+          configMap:
+            name: benchmark-config-blackwell
+        - name: results
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: benchmark-config-blackwell
+  namespace: inference
+data:
+  rtxpro6000.yaml: |
+    gpu_label: "RTX PRO 6000 Blackwell"
+    model: "Qwen/Qwen2.5-VL-7B-Instruct"
+    vllm_url: "http://vllm-tp2.inference.svc.cluster.local:8000/v1/completions"
+    tag_prefix: "blackwell"
+    gpu_hourly_usd: PLACEHOLDER
+    num_requests: 40
+    batch_sizes: [32, 128, 256, 512]
+    concurrency_levels: [1, 4, 8, 16, 32]
+    request_timeout_s: 120.0

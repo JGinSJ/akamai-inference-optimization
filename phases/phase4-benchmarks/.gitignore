@@ -1,0 +1,7 @@
+# Generated benchmark outputs — never commit raw results
+results/*.json
+results/*.csv
+results/REPORT.md
+
+# Keep the placeholder so git tracks the directory
+!results/.gitkeep

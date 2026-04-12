@@ -42,28 +42,31 @@ vLLM pod (LKE GPU node)
   `-- store response in Valkey
 ```
 
-## File layout (target)
+## File layout
 
 ```
 phases/phase2-prefix-cache/
 ├── README.md
 ├── fermyon/
+│   ├── Cargo.toml            # Rust crate — spin-sdk 3, sha2, serde_json
+│   ├── Cargo.lock
 │   ├── spin.toml             # Fermyon app manifest
 │   └── src/
-│       └── handler.rs        # Wasm function (Rust or TinyGo — TBD)
+│       └── lib.rs            # Wasm handler: hash → Valkey GET → vLLM → Valkey SET
 ├── valkey/
-│   ├── valkey.yaml           # LKE deployment manifest
+│   ├── valkey.yaml           # LKE Deployment + Service + ConfigMap
 │   └── config/
-│       └── valkey.conf       # Valkey configuration
+│       └── valkey.conf       # Standalone, allkeys-lru, 2 GB cap
 ├── vllm/
-│   ├── vllm.yaml             # LKE deployment manifest
-│   └── serve_config.yaml     # vLLM serving arguments
+│   ├── vllm.yaml             # LKE Deployment + Service (GPU node)
+│   └── serve_config.yaml     # vLLM flags including --enable-prefix-caching
 ├── benchmark/
 │   ├── requirements.txt
-│   ├── load_gen.py           # Request generator with shared prefixes
-│   └── report.py             # Parse results, print hit rate + latency
+│   ├── load_gen.py           # Request generator with configurable prefix-share rate
+│   └── report.py             # Hit rate + latency report from load_gen output
 └── tests/
-    └── test_prefix_hash.py   # Unit test: same prefix -> same hash
+    ├── __init__.py
+    └── test_prefix_hash.py   # Hash contract tests + semantic-cache stub (skipped)
 ```
 
 ## Success criteria
@@ -75,14 +78,11 @@ phases/phase2-prefix-cache/
 - [ ] Valkey hit rate exceeds 40% under that load.
 - [ ] Cached requests show lower median latency than uncached requests.
 
-## Open questions
+## Decisions
 
-> TODO: Decide Fermyon Wasm language — Rust (mature SDK) or TinyGo (smaller
-> binary). Affects fermyon/ source layout.
-
-> TODO: Confirm Valkey version and whether standalone or cluster mode is
-> needed for Phase 2 scale.
-
-> TODO: Confirm vLLM model to use (size, quantization) given LKE GPU pool.
-
-> TODO: Define prefix hashing scheme — full prefix bytes, or token IDs?
+| Decision | Resolution |
+|---|---|
+| Wasm language | Rust, using spin-sdk 3.x — mature SDK, strong async support |
+| Valkey version | 8.0, standalone mode, allkeys-lru eviction, 2 GB memory cap |
+| Prefix hashing | SHA-256 of the first 128 Unicode characters (not bytes) of the prompt, encoded as UTF-8 |
+| vLLM model | Configured via `MODEL_NAME` in the Deployment ConfigMap — no model hardcoded in the serving layer |

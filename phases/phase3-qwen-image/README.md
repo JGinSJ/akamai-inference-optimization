@@ -62,19 +62,23 @@ Override at runtime: `MODEL_NAME=Qwen/Qwen2.5-VL-3B-Instruct uvicorn ...`
 ```
 phase3-qwen-image/
 ├── serve/
+│   ├── __init__.py           # Exports only batching layer (no ML deps at import time)
+│   ├── app.py                # FastAPI server, /v1/generate + /health
 │   ├── model.py              # Baseline loader + run_inference()
 │   ├── model_optimized.py    # EXPERIMENTAL optimized loader
-│   ├── batching.py           # DynamicBatcher + Future
-│   └── app.py                # FastAPI server, /v1/generate + /health
+│   ├── batching.py           # DynamicBatcher, Future, InferenceRequest
+│   └── image_utils.py        # decode_image() — stdlib + Pillow only, no torch/transformers
 ├── k8s/
 │   ├── deployment.yaml       # LKE Deployment (GPU, ConfigMap)
 │   ├── service.yaml          # ClusterIP on port 8080
 │   └── gpu-node-pool.yaml    # Akamai LKE node pool spec (PLACEHOLDER)
 ├── benchmark/
+│   ├── requirements.txt
 │   ├── load_gen.py           # Synthetic-image load generator
 │   └── report.py             # Throughput + latency analysis
 └── tests/
-    └── test_model.py         # Batcher/Future/decode tests; GPU tests skipped
+    ├── __init__.py
+    └── test_model.py         # Infrastructure tests (no GPU); GPU tests skipped without CUDA
 ```
 
 ---

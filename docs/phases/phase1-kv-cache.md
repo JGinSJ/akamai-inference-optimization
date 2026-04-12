@@ -37,20 +37,22 @@ can be clearly motivated.
    at every step) to make the speedup measurable.
 4. **Memory plot** — KV cache size (bytes) vs sequence length, per layer.
 
-## File layout (target)
+## File layout
 
 ```
 phases/phase1-kv-cache/
 ├── README.md
 ├── requirements.txt
+├── demo.py               # Runnable end-to-end demo script
 ├── kv_cache/
 │   ├── __init__.py
-│   ├── model.py          # Minimal decoder-only transformer
-│   ├── attention.py      # Multi-head attention with explicit KV cache
-│   └── generate.py       # Autoregressive generation loop
-├── demo.py               # Runnable end-to-end demo script
+│   ├── tokenizer.py      # Character-level tokenizer, vocab size 98
+│   ├── model.py          # TransformerBlock + DecoderTransformer
+│   ├── attention.py      # MultiHeadAttention with explicit KV cache
+│   └── generate.py       # Prefill + decode loop, cached and no-cache modes
 └── tests/
-    └── test_attention.py # Unit tests for cache correctness
+    ├── __init__.py
+    └── test_attention.py # Logit-level and token-level correctness tests
 ```
 
 ## Success criteria
@@ -60,10 +62,9 @@ phases/phase1-kv-cache/
 - [ ] Per-step timing shows sublinear growth with cache enabled.
 - [ ] Tests pass: `python -m pytest phases/phase1-kv-cache/tests/`.
 
-## Open questions
+## Decisions
 
-> TODO: Decide model size (number of layers, heads, d_model) — small enough
-> to run on CPU for CI, large enough to show a meaningful timing difference.
-
-> TODO: Decide tokenizer approach — character-level, BPE stub, or a
-> dependency-free byte-pair encoder.
+| Decision | Resolution |
+|---|---|
+| Model size | 4 layers, 4 heads, d_model=256, d_ff=1024 — runs on CPU in CI, shows meaningful timing difference |
+| Tokenizer | Character-level, 95 printable ASCII + PAD/BOS/EOS = 98 tokens, no external dependencies |

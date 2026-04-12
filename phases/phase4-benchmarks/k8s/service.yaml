@@ -1,0 +1,20 @@
+# ClusterIP service for the vLLM deployment.
+# Benchmark Jobs and the load generator use this DNS name:
+#   http://vllm-tp2.inference.svc.cluster.local:8000/v1/completions
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-tp2
+  namespace: inference
+  labels:
+    app: vllm-tp2
+    phase: "4"
+spec:
+  selector:
+    app: vllm-tp2
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

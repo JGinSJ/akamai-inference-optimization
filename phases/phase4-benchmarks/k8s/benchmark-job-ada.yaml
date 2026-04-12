@@ -1,0 +1,87 @@
+# K8s Job — run the Phase 4 benchmark harness against the RTX 4000 Ada node.
+#
+# The Job mounts a ConfigMap with the benchmark config, runs
+# harness/run_benchmark.py, and writes results to an emptyDir volume.
+# To persist results, replace emptyDir with a PVC or use kubectl cp
+# to extract results/ before the pod is cleaned up.
+#
+# TODO: Set image, nodeSelector, and vllm_url before running.
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: benchmark-ada
+  namespace: inference
+  labels:
+    phase: "4"
+    gpu: rtx-4000-ada
+spec:
+  backoffLimit: 0         # fail fast — do not retry on error
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+
+      nodeSelector:
+        gpu-type: PLACEHOLDER   # TODO: RTX 4000 Ada node pool label
+
+      containers:
+        - name: benchmark
+          # TODO: Build and push a harness image, or use a Python base image
+          # with requirements installed.
+          image: PLACEHOLDER
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - python
+            - -m
+            - harness.run_benchmark
+            - --config
+            - /config/rtx4000ada.yaml
+            - --results-dir
+            - /results
+
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: results
+              mountPath: /results
+
+      volumes:
+        - name: config
+          configMap:
+            name: benchmark-config-ada
+        - name: results
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: benchmark-config-ada
+  namespace: inference
+data:
+  # Inline the config so the Job is self-contained.
+  # Edit vllm_url to point at the running vLLM Service.
+  rtx4000ada.yaml: |
+    gpu_label: "RTX 4000 Ada"
+    model: "Qwen/Qwen2.5-VL-7B-Instruct"
+    vllm_url: "http://vllm-tp2.inference.svc.cluster.local:8000/v1/completions"
+    tag_prefix: "ada"
+    gpu_hourly_usd: PLACEHOLDER
+    num_requests: 40
+    batch_sizes: [32, 128, 256]
+    concurrency_levels: [1, 4, 8, 16]
+    request_timeout_s: 120.0

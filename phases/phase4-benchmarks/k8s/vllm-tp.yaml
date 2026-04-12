@@ -1,0 +1,122 @@
+# vLLM Deployment — tensor-parallel mode (2 GPUs on one node)
+#
+# Tensor parallelism splits model weights across multiple GPUs on a single
+# node using NVLink or PCIe.  Use this when a single model is too large to
+# fit in one GPU's VRAM, or when you need lower latency at the cost of
+# requiring two GPUs per replica.
+#
+# For data parallelism instead (more throughput, simpler ops), deploy
+# multiple single-GPU replicas behind a load balancer — no changes to the
+# vLLM flags are needed.  See README.md for the trade-off discussion.
+#
+# TODO: Replace PLACEHOLDER values before deploying:
+#   - spec.template.spec.containers[0].image
+#   - spec.template.spec.nodeSelector
+#   - MODEL_NAME value
+#   - HF_HOME path on the node (or use a PVC)
+#
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-tp2
+  namespace: inference
+  labels:
+    app: vllm-tp2
+    phase: "4"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-tp2
+  template:
+    metadata:
+      labels:
+        app: vllm-tp2
+    spec:
+      # TODO: Set to the Akamai LKE node pool label for dual-GPU nodes.
+      # A tensor-parallel deployment requires a node with >= 2 GPUs.
+      nodeSelector:
+        gpu-type: PLACEHOLDER   # e.g. rtx-pro-6000-blackwell
+
+      containers:
+        - name: vllm
+          # TODO: Pin to a specific vLLM release tag.
+          image: vllm/vllm-openai:PLACEHOLDER
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - python
+            - -m
+            - vllm.entrypoints.openai.api_server
+
+          args:
+            - --model
+            - $(MODEL_NAME)
+            - --tensor-parallel-size
+            - "2"                       # split across 2 GPUs on this node
+            - --enable-prefix-caching   # KV cache reuse (Phase 2 technique)
+            - --gpu-memory-utilization
+            - "0.90"
+            - --dtype
+            - float16
+            - --port
+            - "8000"
+            - --host
+            - "0.0.0.0"
+            - --trust-remote-code
+
+          env:
+            - name: MODEL_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: vllm-config
+                  key: model_name
+            - name: HF_HOME
+              value: /model-cache   # TODO: Mount a PVC here for persistence
+
+          ports:
+            - containerPort: 8000
+
+          resources:
+            limits:
+              nvidia.com/gpu: "2"    # Request both GPUs on the node
+            requests:
+              nvidia.com/gpu: "2"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            failureThreshold: 12
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: model-cache
+              mountPath: /model-cache
+
+      volumes:
+        - name: model-cache
+          # TODO: Replace with a PersistentVolumeClaim backed by Akamai
+          # block storage to avoid re-downloading the model on pod restart.
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-config
+  namespace: inference
+data:
+  # TODO: Change to Qwen/Qwen2.5-VL-3B-Instruct to fit in less VRAM,
+  # or Qwen/Qwen2.5-VL-72B-Instruct for a full tensor-parallel load test.
+  model_name: "Qwen/Qwen2.5-VL-7B-Instruct"

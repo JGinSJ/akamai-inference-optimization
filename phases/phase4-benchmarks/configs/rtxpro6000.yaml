@@ -1,0 +1,27 @@
+# Benchmark configuration — RTX PRO 6000 Blackwell
+# -------------------------------------------------------
+# Run with:
+#   python -m harness.run_benchmark --config configs/rtxpro6000.yaml
+
+gpu_label: "RTX PRO 6000 Blackwell"
+
+model: "Qwen/Qwen2.5-VL-7B-Instruct"
+
+# TODO: Replace with the actual Akamai LKE service address or LoadBalancer IP.
+vllm_url: "http://localhost:8000/v1/completions"
+
+tag_prefix: "blackwell"
+
+# Akamai Cloud GPU node hourly price in USD.
+# TODO: Fill in from https://www.akamai.com/products/cloud-computing/gpu
+# PLACEHOLDER — cost model will raise an error until this is set.
+gpu_hourly_usd: PLACEHOLDER
+
+num_requests: 40
+
+# Blackwell has larger VRAM, so test higher max_tokens values.
+batch_sizes: [32, 128, 256, 512]
+
+concurrency_levels: [1, 4, 8, 16, 32]
+
+request_timeout_s: 120.0
