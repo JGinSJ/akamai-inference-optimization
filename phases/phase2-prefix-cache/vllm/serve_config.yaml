@@ -1,25 +1,22 @@
 # vLLM serving configuration for Phase 2
 #
 # These arguments are passed to the vLLM OpenAI-compatible server.
-# They are referenced by vllm.yaml via the VLLM_ARGS environment variable,
-# or can be passed directly on the command line:
+# The entrypoint changed in vLLM 0.4+: use `vllm serve` not
+# `python -m vllm.entrypoints.openai.api_server`.
+# Equivalent command line (matches vllm.yaml):
 #
-#   python -m vllm.entrypoints.openai.api_server \
-#       --model <TODO> \
+#   vllm serve mistralai/Mistral-7B-Instruct-v0.2 \
 #       --enable-prefix-caching \
 #       --port 8000 \
-#       --host 0.0.0.0
+#       --host 0.0.0.0 \
+#       --max-model-len 25664
 #
 # ---------------------------------------------------------------------------
 # Model
 # ---------------------------------------------------------------------------
-# TODO: Set the model path or HuggingFace hub ID once GPU VRAM is confirmed.
-# See docs/hardware.md for GPU specs.
-# Examples:
-#   model: "meta-llama/Llama-3.1-8B-Instruct"     # ~16 GB FP16
-#   model: "Qwen/Qwen2.5-7B-Instruct"             # ~14 GB FP16
-#   model: "microsoft/Phi-3-mini-4k-instruct"      # ~8 GB FP16
-model: "PLACEHOLDER"
+# Confirmed live model on akamai-lke-us-ord (2026-04-14).
+# See results/phase2_prefix_cache_baseline.json.
+model: "mistralai/Mistral-7B-Instruct-v0.2"
 
 # ---------------------------------------------------------------------------
 # Prefix caching — the core of Phase 2

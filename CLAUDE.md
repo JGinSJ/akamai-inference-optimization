@@ -38,9 +38,9 @@ Never deviate from these.
 | Phase | Name | Status |
 |-------|------|--------|
 | 1 | KV Cache from Scratch (PyTorch) | Complete |
-| 2 | Fermyon + Valkey + vLLM Prefix Caching | Complete (deploy pending live cluster) |
-| 3 | Qwen-Image Inference on Akamai Cloud | Complete (GPU deploy pending) |
-| 4 | Multi-GPU Benchmarking and Cost Model | Complete (GPU deploy pending) |
+| 2 | Fermyon + Valkey + vLLM Prefix Caching | Complete — live on LKE us-ord |
+| 3 | Qwen-Image Inference on Akamai Cloud | Complete — live on LKE us-ord |
+| 4 | Multi-GPU Benchmarking and Cost Model | Complete (Blackwell deploy pending) |
 
 Update the Status column as phases are completed.
 
@@ -48,6 +48,9 @@ Update the Status column as phases are completed.
 
 ```
 akamai-inference-optimization/
+├── infrastructure/
+│   ├── README.md               ← post-cluster-creation checklist
+│   └── terraform/              ← LKE cluster + node pool Terraform
 ├── phases/
 │   ├── phase1-kv-cache/
 │   ├── phase2-prefix-cache/
@@ -74,7 +77,7 @@ Record unresolved decisions here. Remove entries when resolved.
 | # | Question | Raised | Resolved |
 |---|----------|--------|----------|
 | 1 | CI/CD pipeline design (GitHub Actions vs other) | Phase 1 scaffold | — |
-| 2 | Akamai LKE cluster sizing for Phase 2 | Phase 1 scaffold | — |
+| 2 | Akamai LKE cluster sizing for Phase 2 | Phase 1 scaffold | 2026-04-11: us-ord region; CPU pool g6-dedicated-4 (1 node); GPU pool g2-gpu-rtx4000a1-l (1 node, RTX 4000 Ada) |
 | 3 | Valkey version and deployment mode (standalone vs cluster) | Phase 1 scaffold | 2026-04-11: Valkey 8.0 standalone, allkeys-lru, 2 GB cap |
 | 4 | Qwen-Image model variant and quantization level for Phase 3 | Phase 1 scaffold | 2026-04-11: Qwen2.5-VL-7B-Instruct, float16, no quantization (overrideable via MODEL_NAME env var) |
 | 5 | Cost model methodology for Phase 4 (per-token, per-request, or per-hour) | Phase 1 scaffold | 2026-04-11: All three — cost/token, cost/request, cost/million-tokens; derived from gpu_hourly_usd ÷ tokens_per_second |
@@ -92,3 +95,7 @@ neatly into the open questions log.
 - 2026-04-11: Phase 2 scaffold complete. Valkey standalone, Fermyon Rust (spin-sdk 3), vLLM prefix caching. Semantic caching marked TODO throughout.
 - 2026-04-11: Phase 3 complete. serve/image_utils.py extracted to keep transformers import out of infrastructure layer; allows CI tests without GPU. transformers pinned to >=4.45,<5.0 (AutoModelForVision2Seq removed in 5.x). torch>=2.4 required but unavailable on Intel Mac — local dev limited to infrastructure tests only.
 - 2026-04-11: Phase 4 complete. Cost model outputs three CSVs (cost_by_batch, cost_by_concurrency, comparison). TP vs DP decision documented in README — decision table defers all GPU-specific cells to measured results. All prices are PLACEHOLDER until Akamai GPU pricing confirmed.
+- 2026-04-12: CORRECTION — Akamai LKE does NOT auto-install the NVIDIA device plugin on GPU node pools. It must be installed manually after cluster creation. Exact command: kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.3/deployments/static/nvidia-device-plugin.yml — See infrastructure/README.md for the full post-cluster-creation checklist. Note: gpu-node-pool.yaml and node-pool-ada.tf both contain stale comments claiming auto-install; treat those as incorrect.
+- 2026-04-14: vLLM entrypoint changed. The `python -m vllm.entrypoints.openai.api_server` form is deprecated; all manifests now use `vllm serve <model>` (CLI entry point added in vLLM 0.4+). vllm.yaml and serve_config.yaml updated accordingly.
+- 2026-04-14: Phase 2 live model confirmed: mistralai/Mistral-7B-Instruct-v0.2 on g2-gpu-rtx4000a1-l, max_model_len 25664. Phase 3 live model confirmed: Qwen/Qwen2.5-VL-7B-Instruct, 3434 ms baseline latency on same node pool.
+- 2026-04-14: RTX PRO 6000 Blackwell now available on Akamai LKE per platform documentation. node-pool-blackwell.tf stub must be activated: confirm plan slug via linode-cli, update blackwell_node_type variable, uncomment resource block.

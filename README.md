@@ -21,10 +21,13 @@ different points in the inference stack:
 
 ```
 akamai-inference-optimization/
+├── infrastructure/
+│   ├── README.md               # Provisioning guide and post-cluster checklist
+│   └── terraform/              # LKE cluster, CPU pool, GPU node pools
 ├── phases/
 │   ├── phase1-kv-cache/        # PyTorch KV cache demo
-│   ├── phase2-prefix-cache/    # Fermyon + Valkey + vLLM
-│   ├── phase3-qwen-image/      # Qwen-Image inference
+│   ├── phase2-prefix-cache/    # Fermyon + Valkey + vLLM  [live: us-ord]
+│   ├── phase3-qwen-image/      # Qwen-Image inference      [live: us-ord]
 │   └── phase4-benchmarks/      # Multi-GPU cost model
 ├── docs/
 │   ├── architecture.md         # System diagram and phase map

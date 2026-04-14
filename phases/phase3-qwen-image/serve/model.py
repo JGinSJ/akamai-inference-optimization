@@ -144,16 +144,3 @@ def run_inference(
     input_len = inputs["input_ids"].shape[1]
     generated_ids = output_ids[0][input_len:]
     return processor.decode(generated_ids, skip_special_tokens=True)
-
-
-def decode_image(image_b64: str) -> Image.Image:
-    """
-    Decode a base64 string to a PIL Image in RGB mode.
-
-    Accepts raw base64 or a data-URI string
-    (e.g. "data:image/jpeg;base64,/9j/4AAQ...").
-    """
-    if "," in image_b64:
-        image_b64 = image_b64.split(",", 1)[1]
-    raw_bytes = base64.b64decode(image_b64)
-    return Image.open(io.BytesIO(raw_bytes)).convert("RGB")

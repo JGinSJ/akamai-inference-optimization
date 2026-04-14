@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "timestamp": "2026-04-14",
+    "cluster": "akamai-lke-us-ord",
+    "node_pool": "g2-gpu-rtx4000a1-l",
+    "model": "mistralai/Mistral-7B-Instruct-v0.2",
+    "max_model_len": 25664,
+    "gpu_memory_utilization": 0.90,
+    "prompt": "What is prefix caching in LLMs? Answer in 2 sentences.",
+    "notes": "Wall clock times are similar between cold and warm requests because the prompt is only 23 tokens. Prefix caching shows larger speedups with longer shared prefixes. Cache hit confirmed via vLLM metrics: 32/69 tokens served from cache (46% hit rate). Valkey is deployed but not yet wired as the KV connector — prefix caching here is vLLM's built-in local GPU cache."
+  },
+  "requests": [
+    {
+      "request": 1,
+      "cache_state": "cold",
+      "wall_clock_seconds": 3.003,
+      "prompt_tokens": 23,
+      "completion_tokens": 63,
+      "total_tokens": 86
+    },
+    {
+      "request": 2,
+      "cache_state": "warm",
+      "wall_clock_seconds": 3.385,
+      "prompt_tokens": 23,
+      "completion_tokens": 71,
+      "total_tokens": 94
+    }
+  ],
+  "vllm_prefix_cache_metrics": {
+    "prefix_cache_queries_total": 69,
+    "prefix_cache_hits_total": 32,
+    "prompt_tokens_cached_total": 32,
+    "cache_hit_rate_tokens": 0.464,
+    "cache_hit_rate_tokens_derivation": "32/69",
+    "enable_prefix_caching": true,
+    "num_gpu_blocks": 1604
+  }
+}

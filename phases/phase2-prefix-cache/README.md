@@ -4,6 +4,37 @@ A prefix-aware inference pipeline where a Fermyon Wasm Function at the
 Akamai edge intercepts requests, checks a Valkey cache, and only forwards
 cache misses to a vLLM backend.
 
+## Live Results
+
+First live prefix-cache run completed on Akamai LKE (2026-04-14).
+Full result: [`results/phase2_prefix_cache_baseline.json`](results/phase2_prefix_cache_baseline.json)
+
+| Field | Value |
+|---|---|
+| Cluster | akamai-lke-us-ord |
+| Node pool | g2-gpu-rtx4000a1-l (RTX 4000 Ada ×1) |
+| Model | mistralai/Mistral-7B-Instruct-v0.2 |
+| Prompt | "What is prefix caching in LLMs? Answer in 2 sentences." |
+| Request 1 (cold) wall clock | 3.003 s — 23 prompt tokens, 63 completion tokens |
+| Request 2 (warm) wall clock | 3.385 s — 23 prompt tokens, 71 completion tokens |
+| vLLM token cache hit rate | **46.4%** (32 of 69 tokens served from GPU cache) |
+| GPU blocks allocated | 1604 |
+| Valkey external cache | Deployed; not yet wired as KV connector |
+
+**On the wall-clock similarity between cold and warm requests:** the prompt is
+only 23 tokens, so the prefix cache saves a small fraction of prefill work.
+Larger speedups appear with longer shared prefixes (e.g. multi-shot system
+prompts of several hundred tokens). The 46% token hit rate in the vLLM metrics
+confirms the cache is active and serving repeated KV states across requests.
+
+**Valkey integration status:** Valkey is running on the CPU node pool but is
+not yet wired as vLLM's external KV connector. The cache hit here is entirely
+vLLM's built-in local GPU block cache. Connecting Valkey as an external cache
+backend — so that KV states survive pod restarts and are shared across replicas
+— is a future TODO.
+
+---
+
 ## Why this reduces inference cost
 
 Phase 1 showed that KV caching saves compute *within* a single model run.
@@ -147,9 +178,11 @@ spin deploy \
   --variable vllm_url=http://vllm-svc.inference:8000
 ```
 
-**Before deploying vLLM:** edit `vllm/vllm.yaml` and set:
-- `MODEL_NAME` in the ConfigMap
-- `akamai.com/gpu-node-pool` nodeSelector label matching your LKE pool
+**Before deploying vLLM:** `MODEL_NAME` and `nodeSelector` are pre-configured
+in `vllm/vllm.yaml` for the us-ord cluster. Verify before applying to a
+different cluster:
+- `MODEL_NAME`: `mistralai/Mistral-7B-Instruct-v0.2`
+- nodeSelector: `gpu-type: rtx4000ada`
 
 ---
 

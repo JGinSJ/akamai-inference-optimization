@@ -40,6 +40,8 @@
 #
 # These labels are referenced in k8s/deployment.yaml nodeSelector.
 
-# NOTE: The Linode Kubernetes Engine NVIDIA device plugin is pre-installed
-# on GPU node pools.  No additional DaemonSet installation is required.
+# NOTE: The NVIDIA device plugin is NOT pre-installed on Akamai LKE GPU
+# node pools.  It must be installed manually after cluster creation:
+#   kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.3/deployments/static/nvidia-device-plugin.yml
+# See infrastructure/README.md for the full post-cluster-creation checklist.
 # Verify with: kubectl describe node <gpu-node> | grep nvidia.com/gpu

@@ -3,6 +3,25 @@
 End-to-end image-language model serving using Qwen2.5-VL, deployed on
 Akamai LKE with RTX 4000 Ada or RTX PRO 6000 Blackwell GPU nodes.
 
+## Live Results
+
+First live inference completed on Akamai LKE (2026-04-14).
+Full result: [`results/phase3_baseline_first_result.json`](results/phase3_baseline_first_result.json)
+
+| Field | Value |
+|---|---|
+| Cluster | akamai-lke-us-ord |
+| Node pool | g2-gpu-rtx4000a1-l (RTX 4000 Ada ×1) |
+| Model | Qwen/Qwen2.5-VL-7B-Instruct |
+| Input | 320×240 solid color JPEG (synthetic test image) |
+| Prompt | "Describe what you see." |
+| Baseline latency (single request) | **3434.29 ms** |
+| Optimizations enabled | none (`USE_OPTIMIZED=false`) |
+
+This is the baseline measurement. Optimized-path and multi-request benchmark results will be recorded here as they are collected.
+
+---
+
 ## Two serving paths
 
 ```

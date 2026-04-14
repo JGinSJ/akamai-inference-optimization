@@ -1,0 +1,31 @@
+# PersistentVolumeClaim — vLLM HuggingFace model cache (Phase 2)
+#
+# Provides durable storage for downloaded model weights so that pod
+# restarts do not re-download the model from HuggingFace.
+#
+# Storage class:
+#   No storageClassName is set, so the cluster default is used.
+#   On Akamai LKE the default storage class is "linode-block-storage".
+#   Applying this manifest will automatically provision a Linode Block
+#   Storage volume in the same region as the cluster (us-ord).
+#   Verify the default with:
+#     kubectl get storageclass
+#
+# Apply before starting the vLLM deployment:
+#   kubectl apply -f vllm/pvc-model-cache.yaml
+#   kubectl apply -f vllm/vllm.yaml
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vllm-model-cache
+  namespace: inference
+  labels:
+    app: vllm
+    phase: "2"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

@@ -23,7 +23,7 @@ spec:
       restartPolicy: Never
 
       nodeSelector:
-        gpu-type: PLACEHOLDER   # TODO: RTX 4000 Ada node pool label
+        gpu-type: "rtx4000ada"
 
       containers:
         - name: benchmark

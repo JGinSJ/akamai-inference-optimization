@@ -1,12 +1,10 @@
 # Qwen-Image inference server — LKE Deployment + Service
 #
 # Before applying:
-#   1. Build and push the container image to a registry accessible from LKE.
-#      TODO: Define a Dockerfile for this phase (out of scope for Phase 3
-#      scaffold — add alongside CI/CD work tracked in CLAUDE.md open question #1).
-#   2. Set MODEL_NAME in the ConfigMap below.
-#   3. Set the nodeSelector label matching your LKE GPU node pool.
-#   4. Create the vllm-model-cache PVC (or rename it) for HuggingFace cache.
+#   1. Build and push: docker build -t ghcr.io/jginsj/qwen-image-server:latest .
+#      See Dockerfile at phases/phase3-qwen-image/Dockerfile.
+#   2. Apply PVC first: kubectl apply -f k8s/pvc-model-cache.yaml
+#   3. Install NVIDIA device plugin if not present — see infrastructure/README.md
 #
 # Apply with:
 #   kubectl apply -f k8s/deployment.yaml
@@ -25,8 +23,7 @@ metadata:
     app: qwen-image
     phase: "3"
 data:
-  # TODO: Set once GPU VRAM is confirmed. See docs/hardware.md and
-  # serve/model.py for variant sizing guidance.
+  # Confirmed: fits on RTX 4000 Ada (g2-gpu-rtx4000a1-l). See results/phase3_baseline_first_result.json.
   MODEL_NAME: "Qwen/Qwen2.5-VL-7B-Instruct"
   MAX_NEW_TOKENS: "256"
   MAX_BATCH_SIZE: "1"
@@ -58,15 +55,12 @@ spec:
       labels:
         app: qwen-image
     spec:
-      # TODO: Replace with the GPU node pool label for your LKE cluster.
-      # RTX 4000 Ada or RTX PRO 6000 Blackwell node pool.
       nodeSelector:
-        akamai.com/gpu-node-pool: "TODO"
+        gpu-type: "rtx4000ada"
 
       containers:
         - name: qwen-image
-          # TODO: Replace with your built and pushed image.
-          image: "PLACEHOLDER/qwen-image-server:latest"
+          image: "ghcr.io/jginsj/qwen-image-server:latest"
           ports:
             - containerPort: 8080
               name: http

@@ -4,9 +4,8 @@
 # GPU-side KV cache keyed by prompt prefix hash.  Requests that share a
 # prompt prefix reuse the already-computed KV states.
 #
-# TODO: Set MODEL_NAME to a real model before deploying.
-#       See vllm/serve_config.yaml for model selection guidance.
-# TODO: Set the correct GPU node selector label for your LKE GPU node pool.
+# MODEL_NAME and nodeSelector are pre-configured for akamai-lke-us-ord.
+# See serve_config.yaml for full flag reference and vllm serve syntax.
 #
 # Apply with:
 #   kubectl apply -f vllm/vllm.yaml
@@ -25,10 +24,9 @@ metadata:
     app: vllm
     phase: "2"
 data:
-  # TODO: Replace PLACEHOLDER with the actual HuggingFace model ID or local
-  # model path once GPU VRAM is confirmed.  See docs/hardware.md and
-  # vllm/serve_config.yaml for sizing guidance.
-  MODEL_NAME: "PLACEHOLDER"
+  # Confirmed live model — matches the deployed instance on akamai-lke-us-ord.
+  # See results/phase2_prefix_cache_baseline.json.
+  MODEL_NAME: "mistralai/Mistral-7B-Instruct-v0.2"
   MAX_NUM_SEQS: "256"
   MAX_NUM_BATCHED_TOKENS: "8192"
   GPU_MEMORY_UTILIZATION: "0.90"
@@ -53,16 +51,12 @@ spec:
       labels:
         app: vllm
     spec:
-      # TODO: Replace with the actual GPU node pool label used in your LKE
-      # cluster.  On Akamai LKE, GPU node pools are commonly labelled with
-      # the Linode type slug (e.g. gpu-rtx4000ada-1).
       nodeSelector:
-        akamai.com/gpu-node-pool: "TODO"
+        gpu-type: "rtx4000ada"
 
       containers:
         - name: vllm
-          # TODO: Pin to a specific vLLM release tag before deploying to
-          # production.  "latest" is used here for scaffolding convenience.
+          # TODO: Pin to a specific vLLM release tag before deploying to production.
           image: vllm/vllm-openai:latest
           ports:
             - containerPort: 8000
@@ -71,17 +65,17 @@ spec:
             - configMapRef:
                 name: vllm-config
           command:
-            - python
-            - -m
-            - vllm.entrypoints.openai.api_server
+            - vllm
           args:
-            - "--model=$(MODEL_NAME)"
+            - "serve"
+            - "$(MODEL_NAME)"
             - "--enable-prefix-caching"
             - "--host=0.0.0.0"
             - "--port=8000"
             - "--gpu-memory-utilization=$(GPU_MEMORY_UTILIZATION)"
             - "--max-num-seqs=$(MAX_NUM_SEQS)"
             - "--max-num-batched-tokens=$(MAX_NUM_BATCHED_TOKENS)"
+            - "--max-model-len=25664"
           resources:
             requests:
               cpu: "4"
