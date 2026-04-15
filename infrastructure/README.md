@@ -11,7 +11,7 @@ infrastructure/
     ├── main.tf                   # Terraform + Linode provider version pins
     ├── variables.tf              # All input variables with defaults
     ├── cluster.tf                # linode_lke_cluster + CPU node pool (inline)
-    ├── node-pool-ada.tf          # RTX 4000 Ada GPU node pool
+    ├── node-pool-ada.tf          # RTX 4000 Ada GPU node pool (node_count=2)
     ├── node-pool-blackwell.tf    # RTX PRO 6000 Blackwell stub (commented out)
     ├── outputs.tf                # cluster_id, kubeconfig, pool IDs
     └── terraform.tfvars.example  # Safe-to-commit variable template
@@ -110,6 +110,17 @@ kubectl apply -f phases/phase2-prefix-cache/vllm/vllm.yaml
 kubectl apply -f phases/phase3-qwen-image/k8s/deployment.yaml
 kubectl apply -f phases/phase3-qwen-image/k8s/service.yaml
 ```
+
+## Running cost summary
+
+| Pool | Plan | Nodes | Cost |
+|------|------|-------|------|
+| CPU (Valkey + services) | g6-dedicated-4 | 1 | $0.108/hr |
+| RTX 4000 Ada | g2-gpu-rtx4000a1-l | 2 | $1.92/hr |
+| **Total** | | | **$2.028/hr** |
+
+Blackwell pool is not included — it is a commented-out stub pending plan slug confirmation.
+Set `ada_node_count = 1` when not running data-parallel benchmarks to save ~$691/mo.
 
 ## Adding the Blackwell node pool
 

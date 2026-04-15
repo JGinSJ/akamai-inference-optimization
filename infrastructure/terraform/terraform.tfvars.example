@@ -21,10 +21,11 @@ cluster_tags  = ["inference-optimization"]
 cpu_node_type  = "g6-dedicated-4"
 cpu_node_count = 1
 
-# RTX 4000 Ada GPU node pool (Phase 2–3 workloads, Phase 4 single-GPU bench)
-# g2-gpu-rtx4000a1-l: 1x Ada, 16 vCPU, 64 GB RAM — $0.96/hr (~$691/mo)
+# RTX 4000 Ada GPU node pool (Phase 2–3 workloads, Phase 4 benchmarks)
+# g2-gpu-rtx4000a1-l: 1x Ada, 16 vCPU, 64 GB RAM — $0.96/hr (~$691/mo) per node
+# Set to 2 for data-parallel Phase 4 experiments; set to 1 to save ~$691/mo when not benchmarking.
 ada_node_type  = "g2-gpu-rtx4000a1-l"
-ada_node_count = 1
+ada_node_count = 2
 
 # RTX PRO 6000 Blackwell GPU node pool (Phase 4 benchmarks)
 # NOT YET AVAILABLE — plan slug is PLACEHOLDER.

@@ -53,8 +53,8 @@ variable "ada_node_type" {
 
 variable "ada_node_count" {
   type        = number
-  description = "Number of nodes in the RTX 4000 Ada node pool."
-  default     = 1
+  description = "Number of nodes in the RTX 4000 Ada node pool. Set to 2 for Phase 4 data-parallel benchmarks."
+  default     = 2
 }
 
 # ---------------------------------------------------------------------------

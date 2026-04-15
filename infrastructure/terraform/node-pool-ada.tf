@@ -2,7 +2,7 @@
 #
 # Plan:  g2-gpu-rtx4000a1-l — 1x RTX 4000 Ada, 16 vCPU, 64 GB RAM
 # Cost:  $0.96/hr (~$691/mo) per node
-# Count: 1 node (scale to 2 for data-parallel Phase 4 experiments)
+# Count: 2 nodes — both carry gpu-type=rtx4000ada so workloads can land on either.
 #
 # Node label applied:
 #   gpu-type = "rtx4000ada"
