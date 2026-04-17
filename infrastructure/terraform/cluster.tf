@@ -9,6 +9,22 @@
 #   node-pool-ada.tf        — RTX 4000 Ada
 #   node-pool-blackwell.tf  — RTX PRO 6000 Blackwell (stub, not yet available)
 #
+# Post-provisioning: apply node labels manually
+# -----------------------------------------------
+# Terraform sets labels on node pools at creation, but LKE does not
+# automatically propagate pool labels to individual Kubernetes Node objects
+# in all versions.  After `terraform apply`, verify labels and reapply if
+# needed:
+#
+#   # CPU pool — required by Fermyon (workload-type=cpu nodeSelector)
+#   kubectl label node <cpu-node-name> workload-type=cpu --overwrite
+#
+#   # GPU pool — required by vLLM and Qwen-Image (gpu-type=rtx4000ada nodeSelector)
+#   kubectl label node <gpu-node-name> gpu-type=rtx4000ada --overwrite
+#
+# Find node names with: kubectl get nodes
+# Find which pool a node belongs to: kubectl get node <name> -o yaml | grep lke.linode.com
+#
 # To provision this cluster:
 #   1. Copy terraform.tfvars.example -> terraform.tfvars and set any overrides.
 #   2. export LINODE_TOKEN="<your-token>"   # never commit this value
@@ -39,5 +55,15 @@ resource "linode_lke_cluster" "main" {
     labels = {
       "workload-type" = "cpu"
     }
+  }
+
+  # The Ada GPU node pool (pool 868011) is managed by the separate
+  # linode_lke_node_pool.ada resource in node-pool-ada.tf.
+  # The Linode provider refreshes this resource by calling the API and
+  # returns all pools associated with the cluster — including externally
+  # managed ones — in the pool attribute. Without this ignore_changes,
+  # Terraform plans to remove any pool not defined inline here.
+  lifecycle {
+    ignore_changes = [pool]
   }
 }

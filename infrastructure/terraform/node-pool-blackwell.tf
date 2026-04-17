@@ -1,11 +1,12 @@
 # RTX PRO 6000 Blackwell GPU node pool — Phase 4 benchmarks.
 #
-# STATUS: NOT AVAILABLE — entire resource block is commented out.
+# STATUS: NOT YET ACTIVATED — resource block is commented out pending slug confirmation.
 #
-# As of 2026-04-11 the RTX PRO 6000 Blackwell plan does not appear in the
-# Linode API (linode-cli linodes types --json).  The old g1-gpu-rtx6000-*
-# family in the API is the Turing-generation Quadro RTX 6000, not the
-# Blackwell RTX PRO 6000, and must not be substituted.
+# As of 2026-04-14 the RTX PRO 6000 Blackwell is available on Akamai LKE per
+# platform documentation, but the exact plan slug has not been confirmed via
+# linode-cli linodes types --json.  The old g1-gpu-rtx6000-* family in the API
+# is the Turing-generation Quadro RTX 6000, not the Blackwell RTX PRO 6000,
+# and must not be substituted.
 #
 # Before uncommenting this resource:
 #   1. Confirm availability with Akamai support or your account team.

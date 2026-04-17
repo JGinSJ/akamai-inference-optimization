@@ -1,0 +1,150 @@
+# vLLM Deployment — single-GPU, RTX 4000 Ada
+#
+# This is the target deployment for Phase 4 benchmarking.
+# It runs vanilla vLLM with no external KV cache (no LMCache, no Valkey).
+#
+# --no-enable-prefix-caching is required for a clean benchmark baseline.
+# The live Phase 2 deployment uses LMCache for prefix reuse; adding vLLM's
+# built-in prefix caching on top of that would contaminate per-token cost
+# measurements. Phase 4 measures raw decode throughput with no cache in the loop.
+#
+# Differences from the Phase 2 deployment (phases/phase2-prefix-cache/vllm/vllm.yaml):
+#   - Image: vanilla vllm/vllm-openai (no LMCache layer)
+#   - No --kv-transfer-config, no LMCACHE_CONFIG_FILE, no Valkey dependency
+#   - --no-enable-prefix-caching (same flag as Phase 2 live, same effect: no block reuse)
+#
+# Port-forward for local benchmarking:
+#   kubectl port-forward -n inference svc/vllm-ada 8000:8000
+#
+# Then run:
+#   python benchmark/benchmark.py --url http://localhost:8000/v1/completions
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: inference
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-ada-config
+  namespace: inference
+  labels:
+    app: vllm-ada
+    phase: "4"
+data:
+  MODEL_NAME: "mistralai/Mistral-7B-Instruct-v0.2"
+  MAX_NUM_SEQS: "256"
+  MAX_NUM_BATCHED_TOKENS: "8192"
+  GPU_MEMORY_UTILIZATION: "0.90"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-ada
+  namespace: inference
+  labels:
+    app: vllm-ada
+    phase: "4"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-ada
+  template:
+    metadata:
+      labels:
+        app: vllm-ada
+    spec:
+      nodeSelector:
+        gpu-type: "rtx4000ada"
+
+      tolerations:
+      - key: "gpu-type"
+        operator: "Equal"
+        value: "rtx4000ada"
+        effect: "NoSchedule"
+
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.8.3
+          imagePullPolicy: IfNotPresent
+
+          envFrom:
+            - configMapRef:
+                name: vllm-ada-config
+
+          command:
+            - vllm
+          args:
+            - serve
+            - $(MODEL_NAME)
+            - "--no-enable-prefix-caching"
+            - "--host=0.0.0.0"
+            - "--port=8000"
+            - "--gpu-memory-utilization=$(GPU_MEMORY_UTILIZATION)"
+            - "--max-num-seqs=$(MAX_NUM_SEQS)"
+            - "--max-num-batched-tokens=$(MAX_NUM_BATCHED_TOKENS)"
+            # Ceiling measured on RTX 4000 Ada (20 GB VRAM) with Mistral-7B-Instruct-v0.2.
+            - "--max-model-len=25664"
+            - "--dtype=float16"
+            - "--trust-remote-code"
+
+          ports:
+            - containerPort: 8000
+              name: http
+
+          resources:
+            requests:
+              cpu: "4"
+              memory: "24Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8"
+              memory: "32Gi"
+              nvidia.com/gpu: "1"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 5
+
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/huggingface
+
+      volumes:
+        - name: model-cache
+          # TODO: Replace with a PersistentVolumeClaim to avoid re-downloading the
+          # model on pod restart. The Phase 2 PVC (vllm-model-cache) can be reused
+          # when Phase 2 and Phase 4 pods do not run simultaneously.
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-ada
+  namespace: inference
+  labels:
+    app: vllm-ada
+    phase: "4"
+spec:
+  type: ClusterIP
+  selector:
+    app: vllm-ada
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP

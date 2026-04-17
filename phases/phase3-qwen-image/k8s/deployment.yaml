@@ -29,13 +29,10 @@ data:
   MAX_BATCH_SIZE: "1"
   MAX_WAIT_S: "0.05"
 
-  # Optimized path (EXPERIMENTAL) — all off by default.
-  # Set to "1" individually to enable each optimization.
-  # Measure with benchmark/ before enabling in production.
-  USE_OPTIMIZED: "0"
-  USE_FLASH_ATTN: "0"
-  USE_BFLOAT16: "0"
-  USE_TORCH_COMPILE: "0"
+  # OPTIMIZED=1 enables the full optimization bundle:
+  #   bfloat16 + Flash Attention 2 + torch.compile(mode="reduce-overhead")
+  # Individual USE_* flags can still override when OPTIMIZED=0.
+  OPTIMIZED: "1"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -57,6 +54,12 @@ spec:
     spec:
       nodeSelector:
         gpu-type: "rtx4000ada"
+
+      tolerations:
+      - key: "gpu-type"
+        operator: "Equal"
+        value: "rtx4000ada"
+        effect: "NoSchedule"
 
       containers:
         - name: qwen-image

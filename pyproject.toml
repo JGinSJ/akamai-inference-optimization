@@ -18,3 +18,9 @@ testpaths = ["phases"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+# Exclude integration tests by default — they require a live cluster.
+# Run with: python -m pytest -m integration
+addopts = "-m 'not integration'"
+markers = [
+    "integration: requires live Fermyon proxy, Valkey, and vLLM (deselected by default)",
+]

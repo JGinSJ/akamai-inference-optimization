@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "timestamp": "2026-04-15",
+    "cluster": "akamai-lke-us-ord",
+    "node_pool": "g2-gpu-rtx4000a1-l",
+    "model": "mistralai/Mistral-7B-Instruct-v0.2",
+    "vllm_version": "0.18.1",
+    "lmcache_version": "0.4.3",
+    "valkey_version": "8.0",
+    "connector": "LMCacheConnectorV1",
+    "kv_role": "kv_both",
+    "backend_url": "resp://valkey-svc.inference.svc.cluster.local:6379",
+    "notes": "Valkey wired and verified as external KV connector via LMCache 0.4.3. Store and retrieve timings confirm KV cache blocks are reaching Valkey on the CPU node. External prefix cache hit rate confirmed in vLLM metrics. Benchmark targets vLLM directly (pre-Fermyon-deployment) — Fermyon front door not yet wired to this LMCache-backed instance."
+  },
+  "valkey_store": {
+    "tokens_stored": 256,
+    "tokens_total": 256,
+    "latency_ms": 3.70,
+    "throughput_gb_per_s": 8.46
+  },
+  "valkey_retrieve": {
+    "tokens_retrieved": 256,
+    "tokens_total": 256,
+    "latency_ms": 1.56,
+    "throughput_gb_per_s": 20.07
+  },
+  "vllm_external_prefix_cache": {
+    "hit_rate": 0.259,
+    "hit_rate_derivation": "confirmed in vLLM metrics",
+    "connector": "LMCacheConnectorV1",
+    "enable_prefix_caching": false
+  }
+}

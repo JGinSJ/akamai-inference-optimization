@@ -10,12 +10,12 @@ LLM inference is expensive because compute is repeatedly thrown away.
 This project demonstrates four techniques for reusing computation at
 different points in the inference stack:
 
-| Phase | Technique | Key Technologies |
-|-------|-----------|-----------------|
-| 1 | KV cache from scratch | PyTorch transformer demo |
-| 2 | Prefix cache at the edge | Fermyon Wasm, Valkey, vLLM |
-| 3 | Image model inference | Qwen-Image on Akamai Cloud |
-| 4 | Multi-GPU benchmarking & cost model | RTX 4000 Ada vs RTX PRO 6000 Blackwell |
+| Phase | Technique | Key Technologies | Status |
+|-------|-----------|-----------------|--------|
+| 1 | KV cache from scratch | PyTorch transformer demo | Complete |
+| 2 | Prefix cache at the edge | Fermyon Wasm, Valkey, vLLM | Complete — live: us-ord |
+| 3 | Image model inference | Qwen-Image on Akamai Cloud | Complete — live: us-ord |
+| 4 | Single-GPU benchmarking & cost model | RTX 4000 Ada (Blackwell pending) | Complete |
 
 ## Repository layout
 
@@ -28,10 +28,11 @@ akamai-inference-optimization/
 │   ├── phase1-kv-cache/        # PyTorch KV cache demo
 │   ├── phase2-prefix-cache/    # Fermyon + Valkey + vLLM  [live: us-ord]
 │   ├── phase3-qwen-image/      # Qwen-Image inference      [live: us-ord]
-│   └── phase4-benchmarks/      # Multi-GPU cost model
+│   └── phase4-benchmarks/      # Single-GPU cost model (Ada measured; Blackwell pending)
 ├── docs/
 │   ├── architecture.md         # System diagram and phase map
 │   ├── hardware.md             # GPU target specifications
+│   ├── cluster-startup.md      # Operational runbook: scale up/down, port-forwards
 │   └── phases/                 # Per-phase scope documents
 ├── CLAUDE.md                   # AI session working rules
 ├── LICENSE                     # Apache 2.0
@@ -99,12 +100,22 @@ baseline and optimised serving paths, and request routing.
 
 See [docs/phases/phase3-qwen-image.md](docs/phases/phase3-qwen-image.md).
 
-### Phase 4 — Multi-GPU Benchmarking and Cost Model
+### Phase 4 — Single-GPU Benchmarking and Cost Model
 
-Head-to-head throughput and cost comparison between RTX 4000 Ada and
-RTX PRO 6000 Blackwell on Akamai Cloud. Includes a vLLM tensor-parallel
-deployment path, an async load generator, and a cost model that converts
-GPU-hour pricing to cost-per-token and cost-per-million-tokens CSV outputs.
+Throughput and cost measurement for RTX 4000 Ada on Akamai Cloud. Uses a
+synchronous concurrency sweep (1→4→8→16), with a cost model that converts
+GPU-hour pricing to cost-per-token and cost-per-million-tokens. RTX PRO 6000
+Blackwell comparison is deferred pending node pool activation.
+
+**Ada results summary** (Mistral-7B, prompt≈256 tok, max_tokens=64,
+gpu_hourly_usd=$0.96):
+
+| Concurrency | tok/s | cost/M tokens (USD) |
+|:-----------:|------:|--------------------:|
+| 1           |  20.9 | $12.77              |
+| 4           |  67.5 |  $3.95              |
+| 8           |  92.4 |  $2.89              |
+| 16          | 184.8 |  $1.44              |
 
 See [docs/phases/phase4-benchmarks.md](docs/phases/phase4-benchmarks.md).
 

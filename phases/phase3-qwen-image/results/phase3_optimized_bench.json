@@ -1,0 +1,152 @@
+{
+  "config": {
+    "endpoint": "http://localhost:8080/v1/generate",
+    "image_spec": "320x240 synthetic JPEG seed=0",
+    "prompt": "Describe what you see.",
+    "max_tokens": 256,
+    "total_runs": 10,
+    "warmup_runs": 1,
+    "measured_runs": 9
+  },
+  "summary": {
+    "gpu": "NVIDIA RTX 4000 Ada Generation",
+    "dtype": null,
+    "optimized": true,
+    "client_latency_ms": {
+      "n": 9,
+      "mean": 2305.23,
+      "std": 28.83,
+      "min": 2277.62,
+      "max": 2355.83
+    },
+    "server_latency_ms": {
+      "n": 9,
+      "mean": 2069.47,
+      "std": 2.94,
+      "min": 2067.44,
+      "max": 2075.35
+    }
+  },
+  "raw": [
+    {
+      "http_status": 200,
+      "client_latency_ms": 3210.88,
+      "server_latency_ms": 2873.89,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 1,
+      "warmup": true
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2277.62,
+      "server_latency_ms": 2067.83,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 2,
+      "warmup": false
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2296.57,
+      "server_latency_ms": 2067.51,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 3,
+      "warmup": false
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2293.8,
+      "server_latency_ms": 2075.35,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 4,
+      "warmup": false
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2298.72,
+      "server_latency_ms": 2067.44,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 5,
+      "warmup": false
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2297.32,
+      "server_latency_ms": 2069.11,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 6,
+      "warmup": false
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2355.83,
+      "server_latency_ms": 2067.46,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 7,
+      "warmup": false
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2353.54,
+      "server_latency_ms": 2073.68,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 8,
+      "warmup": false
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2285.21,
+      "server_latency_ms": 2068.28,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 9,
+      "warmup": false
+    },
+    {
+      "http_status": 200,
+      "client_latency_ms": 2288.47,
+      "server_latency_ms": 2068.57,
+      "optimized": true,
+      "dtype": null,
+      "gpu": "NVIDIA RTX 4000 Ada Generation",
+      "response": "The image shows a yellow square with a white border. The square is evenly colored, and the white border is of uniform width around the edges of the square. There are no other elements or text within the image.",
+      "error": null,
+      "run": 10,
+      "warmup": false
+    }
+  ]
+}

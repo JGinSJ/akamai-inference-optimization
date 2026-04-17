@@ -10,8 +10,14 @@ MODEL_NAME        HuggingFace model ID or local path.
                   Default: Qwen/Qwen2.5-VL-7B-Instruct
                   TODO: Update once VRAM is confirmed in docs/hardware.md.
 
-USE_OPTIMIZED     "1" to load the EXPERIMENTAL optimized model.
-                  Default: "0" (baseline).
+OPTIMIZED         "1" or "true" to enable the full EXPERIMENTAL optimization
+                  bundle: bfloat16 + Flash Attention 2 + torch.compile
+                  (mode="reduce-overhead").  Default: "0" (baseline).
+                  When set, USE_BFLOAT16 / USE_FLASH_ATTN / USE_TORCH_COMPILE
+                  are all forced on regardless of their individual values.
+
+USE_OPTIMIZED     "1" to load the EXPERIMENTAL optimized model with
+                  individual flags below.  Default: "0".
 USE_FLASH_ATTN    "1" to enable EXPERIMENTAL Flash Attention 2.
 USE_BFLOAT16      "1" to enable EXPERIMENTAL bfloat16 dtype.
 USE_TORCH_COMPILE "1" to enable EXPERIMENTAL torch.compile.
@@ -27,8 +33,8 @@ Usage
     pip install -r requirements.txt
     uvicorn serve.app:app --host 0.0.0.0 --port 8080
 
-To run the optimized (EXPERIMENTAL) path:
-    USE_OPTIMIZED=1 USE_FLASH_ATTN=1 uvicorn serve.app:app --port 8080
+Full optimization bundle (bfloat16 + Flash Attention 2 + torch.compile):
+    OPTIMIZED=1 uvicorn serve.app:app --port 8080
 """
 
 import logging
@@ -53,10 +59,18 @@ log = logging.getLogger(__name__)
 # Configuration from environment
 # ---------------------------------------------------------------------------
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-VL-7B-Instruct")
-USE_OPTIMIZED = os.environ.get("USE_OPTIMIZED", "0") == "1"
-USE_FLASH_ATTN = os.environ.get("USE_FLASH_ATTN", "0") == "1"
-USE_BFLOAT16 = os.environ.get("USE_BFLOAT16", "0") == "1"
-USE_TORCH_COMPILE = os.environ.get("USE_TORCH_COMPILE", "0") == "1"
+
+# OPTIMIZED=1 is the bundled flag: forces bfloat16 + Flash Attention 2 +
+# torch.compile(mode="reduce-overhead") on in a single env-var.
+OPTIMIZED = os.environ.get("OPTIMIZED", "0").lower() in ("1", "true")
+
+# When OPTIMIZED=1 all three sub-flags are forced on.
+# Individual flags still work for fine-grained control when OPTIMIZED=0.
+USE_OPTIMIZED = OPTIMIZED or os.environ.get("USE_OPTIMIZED", "0") == "1"
+USE_FLASH_ATTN = OPTIMIZED or os.environ.get("USE_FLASH_ATTN", "0") == "1"
+USE_BFLOAT16 = OPTIMIZED or os.environ.get("USE_BFLOAT16", "0") == "1"
+USE_TORCH_COMPILE = OPTIMIZED or os.environ.get("USE_TORCH_COMPILE", "0") == "1"
+
 MAX_NEW_TOKENS = int(os.environ.get("MAX_NEW_TOKENS", "256"))
 MAX_BATCH_SIZE = int(os.environ.get("MAX_BATCH_SIZE", "1"))
 MAX_WAIT_S = float(os.environ.get("MAX_WAIT_S", "0.05"))
@@ -65,6 +79,7 @@ MAX_WAIT_S = float(os.environ.get("MAX_WAIT_S", "0.05"))
 _model = None
 _processor = None
 _batcher: DynamicBatcher = None
+_active_dtype: str = "float16"  # updated in _startup()
 
 GPU_NAME = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu"
 
@@ -80,12 +95,13 @@ app = FastAPI(
 
 @app.on_event("startup")
 def _startup() -> None:
-    global _model, _processor, _batcher
+    global _model, _processor, _batcher, _active_dtype
 
     if USE_OPTIMIZED:
         log.info(
-            "EXPERIMENTAL optimized model requested. "
+            "%s optimized model requested. "
             "flash_attn=%s bfloat16=%s torch_compile=%s",
+            "OPTIMIZED bundle:" if OPTIMIZED else "EXPERIMENTAL:",
             USE_FLASH_ATTN,
             USE_BFLOAT16,
             USE_TORCH_COMPILE,
@@ -96,8 +112,10 @@ def _startup() -> None:
             use_bfloat16=USE_BFLOAT16,
             use_torch_compile=USE_TORCH_COMPILE,
         )
+        _active_dtype = "bfloat16" if USE_BFLOAT16 else "float16"
     else:
         _model, _processor = load_model(model_name=MODEL_NAME)
+        _active_dtype = "float16"
 
     def _process_batch(batch: list) -> list:
         # NOTE: requests within a batch are processed sequentially.
@@ -117,9 +135,9 @@ def _startup() -> None:
         max_wait_s=MAX_WAIT_S,
     )
     log.info(
-        "Server ready. GPU=%s | model=%s | optimized=%s | "
+        "Server ready. GPU=%s | model=%s | OPTIMIZED=%s | dtype=%s | "
         "max_batch=%d | max_wait=%.3fs",
-        GPU_NAME, MODEL_NAME, USE_OPTIMIZED, MAX_BATCH_SIZE, MAX_WAIT_S,
+        GPU_NAME, MODEL_NAME, OPTIMIZED, _active_dtype, MAX_BATCH_SIZE, MAX_WAIT_S,
     )
 
 
@@ -186,5 +204,6 @@ def health() -> dict:
         "status": "ok",
         "gpu": GPU_NAME,
         "model": MODEL_NAME,
-        "optimized": USE_OPTIMIZED,
+        "optimized": OPTIMIZED,
+        "dtype": _active_dtype,
     }

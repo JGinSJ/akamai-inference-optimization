@@ -1,0 +1,49 @@
+# LMCache configuration — Phase 2 external KV cache offload to Valkey
+#
+# This ConfigMap is mounted into the vLLM pod at /etc/lmcache/config.yaml.
+# vLLM picks it up via the LMCACHE_CONFIG_FILE environment variable.
+#
+# Backend: Valkey (open-source Redis-compatible fork) running in the
+# inference namespace on the CPU node pool.
+#
+# Apply with:
+#   kubectl apply -f vllm/lmcache-configmap.yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lmcache-config
+  namespace: inference
+  labels:
+    app: vllm
+    phase: "2"
+data:
+  config.yaml: |
+    # ---------------------------------------------------------------------------
+    # Remote storage backend — Valkey via RESP protocol
+    # ---------------------------------------------------------------------------
+    # remote_url uses the resp:// scheme.  RESP (REdis Serialization Protocol)
+    # is the wire protocol spoken by both Redis and Valkey.  Valkey is an
+    # open-source, Redis-compatible fork — not Redis itself.  LMCache requires
+    # no Redis-specific client library; RESP compatibility is sufficient.
+    #
+    # No credentials are set here.  Valkey is deployed without authentication
+    # (protected-mode no, no requirepass) — see valkey/valkey.yaml.
+    # If auth is added in future, set LMCACHE_RESP_USERNAME and
+    # LMCACHE_RESP_PASSWORD as environment variables rather than storing
+    # credentials in this ConfigMap.
+    remote_url: "resp://valkey-svc.inference.svc.cluster.local:6379"
+
+    # Serialization format for KV cache blocks written to Valkey.
+    # "naive" is lossless and requires no pre-trained compression model.
+    # Alternative "cachegen" is lossy but smaller; not used here.
+    remote_serde: "naive"
+
+    # ---------------------------------------------------------------------------
+    # Chunking
+    # ---------------------------------------------------------------------------
+    # Number of tokens per stored KV cache chunk.
+    # 256 tokens at Mistral-7B dimensions ≈ 4 MB per chunk (fp16).
+    # Smaller values increase Valkey round-trip overhead; larger values
+    # reduce reuse granularity.  256 is the recommended default.
+    chunk_size: 256

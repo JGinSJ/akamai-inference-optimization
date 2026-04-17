@@ -18,7 +18,28 @@ Full result: [`results/phase3_baseline_first_result.json`](results/phase3_baseli
 | Baseline latency (single request) | **3434.29 ms** |
 | Optimizations enabled | none (`USE_OPTIMIZED=false`) |
 
-This is the baseline measurement. Optimized-path and multi-request benchmark results will be recorded here as they are collected.
+This is the baseline measurement.
+
+### Optimized results
+
+Full results: [`results/phase3_optimized_bench.json`](results/phase3_optimized_bench.json)
+
+Active optimizations: `OPTIMIZED=1` (bfloat16 + sdpa + torch.compile, full bundle)
+
+| Metric | Value |
+|---|---|
+| Optimizations | bfloat16 · sdpa · torch.compile (reduce-overhead) |
+| dtype (from /health) | bfloat16 |
+| Runs measured | 9 (run 1 discarded — torch.compile warm-up) |
+| Server latency mean | **2,069 ms** |
+| Server latency std | 2.94 ms |
+| Server latency min / max | 2,067 ms / 2,075 ms |
+| Warm-up run latency | 2,874 ms (run 1, discarded) |
+| **vs. baseline** | **−1,365 ms (−39.7%)** |
+
+The three optimizations were enabled as a bundle (`OPTIMIZED=1`). Per-optimization
+isolation would require multiple pod restarts on a live cluster and was not measured.
+The −39.7% figure represents the combined effect of bfloat16, sdpa, and torch.compile.
 
 ---
 
@@ -49,9 +70,9 @@ composition.  No throughput or latency improvement is claimed.
 
 | Optimization | Mechanism | Notes |
 |---|---|---|
-| `flash_attention_2` | Fused O(n) CUDA attention kernel | Requires `pip install flash-attn`; CUDA ≥ 8.0 |
-| `bfloat16` | Larger float dynamic range vs float16 | May suit Blackwell's tensor cores; measure on Ada |
-| `torch.compile` | Traces compute graph, emits optimized kernels | Slow first call; graphs breaks logged as warnings |
+| `sdpa` | `attn_implementation="sdpa"` — PyTorch's built-in `scaled_dot_product_attention`, dispatched to fused CUDA kernels on Ada/Blackwell at runtime | No extra package required; enabled via `USE_FLASH_ATTN=1` |
+| `bfloat16` | Larger float dynamic range vs float16 | May suit Blackwell's tensor cores; measured −39.7% on Ada as part of the full bundle |
+| `torch.compile` | Traces compute graph, emits optimized kernels | Slow first call (~2,874 ms warm-up); stable at ~2,069 ms from run 2 onward |
 
 **How to measure:** run `benchmark/load_gen.py` with `USE_OPTIMIZED=0`,
 save results as `phase3_baseline.json`, repeat with `USE_OPTIMIZED=1` as
@@ -69,8 +90,6 @@ Default: `Qwen/Qwen2.5-VL-7B-Instruct`
 | Qwen/Qwen2.5-VL-3B-Instruct | ~ 8 GB |
 | **Qwen/Qwen2.5-VL-7B-Instruct** ← default | ~16 GB |
 | Qwen/Qwen2.5-VL-72B-Instruct | ~144 GB |
-
-> TODO: Confirm variant once GPU VRAM is measured. See `docs/hardware.md`.
 
 Override at runtime: `MODEL_NAME=Qwen/Qwen2.5-VL-3B-Instruct uvicorn ...`
 

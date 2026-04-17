@@ -46,16 +46,14 @@ spec:
           imagePullPolicy: IfNotPresent
 
           command:
-            - python
-            - -m
-            - vllm.entrypoints.openai.api_server
+            - vllm
 
           args:
-            - --model
+            - serve
             - $(MODEL_NAME)
             - --tensor-parallel-size
             - "2"                       # split across 2 GPUs on this node
-            - --enable-prefix-caching   # KV cache reuse (Phase 2 technique)
+            - --enable-prefix-caching
             - --gpu-memory-utilization
             - "0.90"
             - --dtype

@@ -144,6 +144,8 @@ JSON results are written to `results/phase1_timing.json` (gitignored).
 python -m pytest tests/ -v
 ```
 
+10 tests pass.
+
 Tests cover:
 - Logit-level correctness: cached and no-cache forward passes produce
   identical logit tensors at every decode step (`torch.allclose`, atol=1e-5)

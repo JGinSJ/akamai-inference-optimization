@@ -15,9 +15,3 @@ pydantic>=2.0
 
 # Testing
 pytest>=7.0
-
-# EXPERIMENTAL: Flash Attention 2
-# Not installed by default — requires a CUDA toolchain and C++ compiler.
-# Install separately after the above:
-#   pip install flash-attn --no-build-isolation
-# See serve/model_optimized.py for usage.

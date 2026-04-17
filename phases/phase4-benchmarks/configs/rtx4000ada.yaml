@@ -18,9 +18,8 @@ vllm_url: "http://localhost:8000/v1/completions"
 tag_prefix: "ada"
 
 # Akamai Cloud GPU node hourly price in USD.
-# TODO: Fill in from https://www.akamai.com/products/cloud-computing/gpu
-# PLACEHOLDER — cost model will raise an error until this is set.
-gpu_hourly_usd: PLACEHOLDER
+# g2-gpu-rtx4000a1-l confirmed rate as of 2026-04.
+gpu_hourly_usd: 0.96
 
 # Total number of requests to send per (batch_size, concurrency) combination.
 num_requests: 40

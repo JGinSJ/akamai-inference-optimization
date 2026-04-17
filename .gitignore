@@ -60,11 +60,12 @@ phases/phase4-benchmarks/results/
 outputs/
 sessions/
 
-# Terraform — never commit state, plans, or actual variable values
+# Terraform — never commit state, plans, credentials, or actual variable values
 # NOTE: .terraform.lock.hcl is intentionally NOT ignored — it pins the
 # provider version (Linode 2.41.2) and must be committed for reproducibility.
 infrastructure/terraform/.terraform/
-infrastructure/terraform/terraform.tfstate
-infrastructure/terraform/terraform.tfstate.backup
+infrastructure/terraform/*.tfstate
+infrastructure/terraform/*.tfstate.backup
 infrastructure/terraform/*.tfplan
 infrastructure/terraform/*.tfvars
+infrastructure/terraform/backend.conf

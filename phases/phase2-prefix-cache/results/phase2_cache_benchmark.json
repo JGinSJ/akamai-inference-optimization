@@ -1,0 +1,266 @@
+{
+  "config": {
+    "run_nonce": "3211dc66-dbb1-4c74-b12c-5351b613117c",
+    "fermyon_url": "http://localhost:8082",
+    "vllm_url": "http://localhost:8000",
+    "model": "mistralai/Mistral-7B-Instruct-v0.2",
+    "num_requests_per_pass": 10,
+    "max_tokens": 64,
+    "shared_prefix_approx_tokens": 500,
+    "phrase_repeats": 50,
+    "tokens_per_repeat": 10
+  },
+  "summary": {
+    "pass1_cold_miss": {
+      "n": 10,
+      "p50": 3058.17,
+      "p95": 5897.38,
+      "mean": 3548.54,
+      "min": 2819.41,
+      "max": 8173.23
+    },
+    "pass2_warm_hit": {
+      "n": 10,
+      "p50": 217.7,
+      "p95": 220.56,
+      "mean": 216.42,
+      "min": 204.73,
+      "max": 220.59
+    },
+    "pass3_direct_vllm": {
+      "n": 10,
+      "p50": 3020.28,
+      "p95": 3079.14,
+      "mean": 3009.8,
+      "min": 2808.0,
+      "max": 3092.46
+    },
+    "miss_overhead_ms": 37.89,
+    "hit_saving_ms": 2802.58,
+    "break_even_hit_rate_pct": 1.3,
+    "observed_hit_rate_pass2_pct": 100.0,
+    "error_counts": {
+      "pass1": 0,
+      "pass2": 0,
+      "pass3": 0
+    }
+  },
+  "raw": {
+    "pass1_cold": [
+      {
+        "latency_ms": 8173.23,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 0
+      },
+      {
+        "latency_ms": 3047.36,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 1
+      },
+      {
+        "latency_ms": 3025.81,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 2
+      },
+      {
+        "latency_ms": 3115.79,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 3
+      },
+      {
+        "latency_ms": 3072.74,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 4
+      },
+      {
+        "latency_ms": 3068.98,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 5
+      },
+      {
+        "latency_ms": 3033.4,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 6
+      },
+      {
+        "latency_ms": 3037.63,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 7
+      },
+      {
+        "latency_ms": 2819.41,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 8
+      },
+      {
+        "latency_ms": 3091.06,
+        "x_cache": "MISS",
+        "http_status": 200,
+        "error": null,
+        "request_index": 9
+      }
+    ],
+    "pass2_warm": [
+      {
+        "latency_ms": 220.53,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 0
+      },
+      {
+        "latency_ms": 219.02,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 1
+      },
+      {
+        "latency_ms": 219.25,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 2
+      },
+      {
+        "latency_ms": 217.23,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 3
+      },
+      {
+        "latency_ms": 212.98,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 4
+      },
+      {
+        "latency_ms": 215.92,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 5
+      },
+      {
+        "latency_ms": 204.73,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 6
+      },
+      {
+        "latency_ms": 220.59,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 7
+      },
+      {
+        "latency_ms": 215.79,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 8
+      },
+      {
+        "latency_ms": 218.17,
+        "x_cache": "HIT",
+        "http_status": 200,
+        "error": null,
+        "request_index": 9
+      }
+    ],
+    "pass3_direct": [
+      {
+        "latency_ms": 3021.04,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 0
+      },
+      {
+        "latency_ms": 3018.96,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 1
+      },
+      {
+        "latency_ms": 3062.87,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 2
+      },
+      {
+        "latency_ms": 3010.15,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 3
+      },
+      {
+        "latency_ms": 3013.56,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 4
+      },
+      {
+        "latency_ms": 3025.68,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 5
+      },
+      {
+        "latency_ms": 2808.0,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 6
+      },
+      {
+        "latency_ms": 3092.46,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 7
+      },
+      {
+        "latency_ms": 3025.71,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 8
+      },
+      {
+        "latency_ms": 3019.52,
+        "x_cache": "",
+        "http_status": 200,
+        "error": null,
+        "request_index": 9
+      }
+    ]
+  }
+}

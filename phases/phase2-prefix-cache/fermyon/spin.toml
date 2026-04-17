@@ -1,46 +1,66 @@
 spin_manifest_version = 2
 
 [application]
-name = "prefix-cache-handler"
-version = "0.1.0"
-description = "Fermyon Wasm front door for Akamai prefix-cache inference pipeline"
+name        = "prefix-cache-handler"
+version     = "0.2.0"
+description = "Fermyon Wasm caching proxy — Phase 2 Valkey + vLLM front door"
 
 # ---------------------------------------------------------------------------
 # Application-level variables
-# Set these at deploy time:
-#   spin deploy --variable valkey_address=redis://valkey-svc:6379 \
-#               --variable vllm_url=http://vllm-svc:8000
-# Or export SPIN_VARIABLE_VALKEY_ADDRESS=... before `spin up`
+# In Kubernetes, pass these as environment variables:
+#   SPIN_VARIABLE_VALKEY_ADDRESS=redis://valkey-svc.inference.svc.cluster.local:6379
+#   SPIN_VARIABLE_VLLM_URL=http://vllm-svc.inference.svc.cluster.local:8000
+#   SPIN_VARIABLE_CACHE_TTL=3600
+# Locally:
+#   export SPIN_VARIABLE_VALKEY_ADDRESS=redis://localhost:6379
+#   export SPIN_VARIABLE_VLLM_URL=http://localhost:8000
 # ---------------------------------------------------------------------------
 [variables]
 valkey_address = { required = true }
 vllm_url       = { required = true }
-# Number of *characters* (not bytes) of the prompt to use as the cache prefix.
-# Increase for more specificity; decrease for higher hit rates.
-# TODO(semantic-cache): this parameter becomes irrelevant once embedding-based
-# similarity replaces exact-match hashing — see README.md.
-prefix_chars = { default = "128" }
+cache_ttl      = { default = "3600" }
 
 # ---------------------------------------------------------------------------
-# HTTP trigger — all POST /v1/completions requests are handled by this component
+# Health check component
+# Serves GET /health → 200 OK for Kubernetes readiness/liveness probes.
+# Separate component so it carries no outbound permissions and does not
+# need Spin variables.  Both components reference the same .wasm binary;
+# the handler checks req.uri().path() == "/health" and returns immediately.
 # ---------------------------------------------------------------------------
 [[trigger.http]]
-route     = "/v1/completions"
+route     = "/health"
+component = "health"
+
+[component.health]
+# Built by: cargo build -p health --target wasm32-wasip1 --release
+source                 = "target/wasm32-wasip1/release/health.wasm"
+allowed_outbound_hosts = []
+
+# ---------------------------------------------------------------------------
+# Proxy component
+# Handles POST /v1/chat/completions.
+# Cache HIT  → return Valkey-stored response, X-Cache: HIT.
+# Cache MISS → forward to vLLM, store response, X-Cache: MISS.
+#
+# allowed_outbound_hosts is tightened to exact cluster-internal names.
+# Note: the redis:// scheme is what the Spin Redis SDK expects.
+# The actual backend is Valkey (open-source Redis-compatible fork).
+# ---------------------------------------------------------------------------
+[[trigger.http]]
+route     = "/v1/chat/completions"
 component = "prefix-cache-handler"
 
 [component.prefix-cache-handler]
-# After `cargo build --target wasm32-wasip1 --release` from the fermyon/ directory
-source = "target/wasm32-wasip1/release/prefix_cache_handler.wasm"
-
-# TODO(prod): tighten to specific Valkey and vLLM hostnames before deploying
-# to a production Fermyon environment.
+# Built by: cargo build -p proxy --target wasm32-wasip1 --release
+source = "target/wasm32-wasip1/release/proxy.wasm"
 allowed_outbound_hosts = [
-    "redis://*:*",
-    "http://*:*",
-    "https://*:*",
+    # Valkey — open-source Redis-compatible fork, Redis protocol
+    "redis://valkey-svc.inference.svc.cluster.local:6379",
+    # vLLM OpenAI-compatible backend
+    "http://vllm-svc.inference.svc.cluster.local:8000",
 ]
 
 [component.prefix-cache-handler.variables]
 valkey_address = "{{ valkey_address }}"
 vllm_url       = "{{ vllm_url }}"
-prefix_chars   = "{{ prefix_chars }}"
+cache_ttl      = "{{ cache_ttl }}"

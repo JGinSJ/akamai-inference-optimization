@@ -1,13 +1,9 @@
-FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:13.0.3-cudnn-devel-ubuntu22.04
 
 # Suppress interactive prompts during apt installs
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install Python 3.11, pip, and venv.
-# Note: python3-pip is not a standard Ubuntu 22.04 apt package name.
-# If this layer fails, replace python3-pip with python3-pip (which
-# installs pip for the system python3) and invoke pip via
-# "python3.11 -m pip" instead of pip3 directly.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3.11 \
         python3-pip \
@@ -22,9 +18,9 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install Python dependencies.
-# flash-attn lines in requirements.txt are comments — pip skips them safely.
-# flash-attn itself requires a CUDA toolchain and must be installed
-# separately if USE_FLASH_ATTN=1 is needed; see serve/model_optimized.py.
+# Attention optimization uses sdpa via torch.nn.functional.scaled_dot_product_attention
+# (built-in, no extra install) — dispatches to flash attention kernels automatically
+# on Ada and newer GPUs at runtime.
 COPY requirements.txt requirements.txt
 RUN python3 -m pip install --no-cache-dir -r requirements.txt
 

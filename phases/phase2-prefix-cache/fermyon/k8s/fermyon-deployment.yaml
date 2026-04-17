@@ -1,0 +1,144 @@
+# Fermyon caching proxy — LKE Deployment, Service, and ConfigMap
+#
+# Runs the Fermyon Wasm front door in the inference namespace on the CPU
+# node pool.  No GPU is required; the Wasm runtime is CPU-only.
+#
+# Apply order:
+#   1. Build and push the image first:
+#        cd phases/phase2-prefix-cache/fermyon
+#        cargo build --workspace --target wasm32-wasip1 --release
+#        docker build -t ghcr.io/jginsj/fermyon-prefix-cache:latest \
+#            -f Dockerfile .
+#        docker push ghcr.io/jginsj/fermyon-prefix-cache:latest
+#
+#   2. Ensure the CPU node carries the workload-type=cpu label:
+#        kubectl label node <cpu-node-name> workload-type=cpu --overwrite
+#        kubectl get nodes --show-labels   # verify
+#
+#   3. Apply this manifest:
+#        kubectl apply -f fermyon/k8s/fermyon-deployment.yaml
+#
+# Dependencies that must already exist:
+#   - Namespace: inference
+#   - Valkey:    valkey-svc.inference.svc.cluster.local:6379
+#   - vLLM:      vllm-svc.inference.svc.cluster.local:8000
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: inference
+---
+# ---------------------------------------------------------------------------
+# ConfigMap — Spin runtime variables
+#
+# Spin reads SPIN_VARIABLE_* environment variables and exposes them as
+# component variables ({{ valkey_address }}, {{ vllm_url }}, {{ cache_ttl }}).
+#
+# Note on redis:// scheme: the Spin Redis SDK expects redis:// URIs.
+# The backend is Valkey (open-source Redis-compatible fork) — not Redis.
+# Valkey speaks the RESP protocol natively; no Redis-specific behaviour
+# is relied upon.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fermyon-config
+  namespace: inference
+  labels:
+    app: fermyon-prefix-cache
+    phase: "2"
+data:
+  # Valkey — open-source Redis-compatible fork, RESP protocol
+  SPIN_VARIABLE_VALKEY_ADDRESS: "redis://valkey-svc.inference.svc.cluster.local:6379"
+  SPIN_VARIABLE_VLLM_URL: "http://vllm-svc.inference.svc.cluster.local:8000"
+  # Cache TTL in seconds.  Entries expire after this duration from first
+  # write.  TTL is not reset on cache hits.
+  SPIN_VARIABLE_CACHE_TTL: "3600"
+---
+# ---------------------------------------------------------------------------
+# Deployment
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fermyon-prefix-cache
+  namespace: inference
+  labels:
+    app: fermyon-prefix-cache
+    phase: "2"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fermyon-prefix-cache
+  template:
+    metadata:
+      labels:
+        app: fermyon-prefix-cache
+    spec:
+      # Schedule on the CPU node pool.
+      # The label is applied manually after cluster provisioning:
+      #   kubectl label node <cpu-node-name> workload-type=cpu --overwrite
+      # See infrastructure/terraform/cluster.tf for the full post-provisioning
+      # label checklist.  No hardcoded node name is used here.
+      nodeSelector:
+        workload-type: "cpu"
+
+      containers:
+        - name: fermyon-prefix-cache
+          image: ghcr.io/jginsj/fermyon-prefix-cache:latest
+          ports:
+            - containerPort: 8082
+              name: http
+          # Inject Spin variables from ConfigMap.
+          # Spin maps SPIN_VARIABLE_<NAME> → {{ name }} in spin.toml.
+          envFrom:
+            - configMapRef:
+                name: fermyon-config
+          resources:
+            # Wasm containers are lightweight.  Adjust if load testing
+            # shows saturation on the CPU node.
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+---
+# ---------------------------------------------------------------------------
+# Service — ClusterIP
+#
+# Exposes the Fermyon proxy inside the cluster on port 8082.
+# External access: use kubectl port-forward or add an Ingress / LoadBalancer.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: fermyon-svc
+  namespace: inference
+  labels:
+    app: fermyon-prefix-cache
+    phase: "2"
+spec:
+  type: ClusterIP
+  selector:
+    app: fermyon-prefix-cache
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+      protocol: TCP

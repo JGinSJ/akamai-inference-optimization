@@ -1,15 +1,26 @@
 # vLLM serving configuration for Phase 2
 #
-# These arguments are passed to the vLLM OpenAI-compatible server.
-# The entrypoint changed in vLLM 0.4+: use `vllm serve` not
-# `python -m vllm.entrypoints.openai.api_server`.
-# Equivalent command line (matches vllm.yaml):
+# Reference document for the flags passed in vllm.yaml.
+# Equivalent command line (matches vllm.yaml args block):
 #
+#   LMCACHE_CONFIG_FILE=/etc/lmcache/config.yaml \
 #   vllm serve mistralai/Mistral-7B-Instruct-v0.2 \
-#       --enable-prefix-caching \
+#       --no-enable-prefix-caching \
+#       --kv-transfer-config '{"kv_connector":"LMCacheConnectorV1","kv_role":"kv_both"}' \
 #       --port 8000 \
 #       --host 0.0.0.0 \
 #       --max-model-len 25664
+#
+# Changes from Phase 2 baseline (vllm/vllm-openai:v0.8.3):
+#   REMOVED  --enable-prefix-caching
+#            LMCache manages prefix reuse externally via Valkey.
+#            The two mechanisms do not stack; local GPU block prefix
+#            caching must be disabled when LMCacheConnectorV1 is active.
+#   ADDED    --no-enable-prefix-caching   (replaces the above)
+#   ADDED    --kv-transfer-config         (activates LMCacheConnectorV1)
+#   ADDED    LMCACHE_CONFIG_FILE env var  (see vllm/lmcache-configmap.yaml)
+#   CHANGED  image: vllm/vllm-openai:v0.8.3 → ghcr.io/jginsj/vllm-lmcache:v0.18.1
+#            Reason: LMCache 0.4.3 requires vLLM 0.17.x minimum.
 #
 # ---------------------------------------------------------------------------
 # Model
@@ -19,12 +30,20 @@
 model: "mistralai/Mistral-7B-Instruct-v0.2"
 
 # ---------------------------------------------------------------------------
-# Prefix caching — the core of Phase 2
+# Prefix caching — LMCache replaces vLLM's local GPU block cache
 # ---------------------------------------------------------------------------
-# Tells vLLM to maintain a GPU-side KV cache keyed by prompt prefix hash.
-# Requests that share a prompt prefix reuse the already-computed KV states,
-# reducing GPU work proportionally to the prefix length.
-enable_prefix_caching: true
+# With LMCacheConnectorV1 active, vLLM's built-in prefix caching must be
+# disabled.  LMCache offloads KV cache blocks that overflow GPU VRAM to
+# Valkey (open-source Redis-compatible fork) via the RESP protocol.
+# See vllm/lmcache-configmap.yaml for the Valkey backend configuration.
+enable_prefix_caching: false
+
+# LMCache connector — activated via --kv-transfer-config in vllm.yaml.
+# kv_role: kv_both — this instance handles both prefill and decode.
+# Config file is delivered via the LMCACHE_CONFIG_FILE environment variable.
+kv_transfer_config:
+  kv_connector: "LMCacheConnectorV1"
+  kv_role: "kv_both"
 
 # ---------------------------------------------------------------------------
 # Server
@@ -35,11 +54,19 @@ port: 8000
 # ---------------------------------------------------------------------------
 # GPU memory
 # ---------------------------------------------------------------------------
-# Fraction of GPU VRAM reserved for the KV cache. The rest is used for model
-# weights. Tune this based on your model size and sequence lengths.
-# TODO: Adjust after measuring model footprint on RTX 4000 Ada and
-# RTX PRO 6000 Blackwell. See docs/hardware.md.
+# Fraction of GPU VRAM reserved for the KV cache.
+# LMCache offloads overflow blocks to Valkey; it does not use additional
+# GPU VRAM beyond what vLLM allocates here.
 gpu_memory_utilization: 0.90
+
+# ---------------------------------------------------------------------------
+# Context length
+# ---------------------------------------------------------------------------
+# Ceiling measured on RTX 4000 Ada (20 GB) with Mistral-7B-Instruct-v0.2
+# under vLLM 0.8.3 (num_gpu_blocks: 1604, see phase2_prefix_cache_baseline.json).
+# vLLM 0.18.x uses the V1 block allocator; revalidate after first deploy:
+#   kubectl -n inference logs -l app=vllm | grep "GPU blocks"
+max_model_len: 25664
 
 # ---------------------------------------------------------------------------
 # Batching
@@ -50,7 +77,7 @@ max_num_batched_tokens: 8192
 # ---------------------------------------------------------------------------
 # Quantization
 # ---------------------------------------------------------------------------
-# TODO: Enable quantization once model and GPU are confirmed.
+# TODO: Enable quantization once re-benchmarked on vLLM 0.18.x.
 # Options: "awq", "gptq", "fp8" (Blackwell only), null (FP16 default)
 quantization: null
 

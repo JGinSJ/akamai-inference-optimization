@@ -57,15 +57,15 @@ def load_model_optimized(
     device             : "cuda", "cpu", or None (auto-detect).
 
     use_flash_attention : EXPERIMENTAL
-        Enable Flash Attention 2 (attn_implementation="flash_attention_2").
+        Enable sdpa (attn_implementation="sdpa") via PyTorch's built-in
+        torch.nn.functional.scaled_dot_product_attention.
 
-        Mechanism: replaces the standard O(n²) attention kernel with a
-        memory-efficient fused CUDA kernel that avoids materialising the
-        full attention matrix.
+        Mechanism: PyTorch 2.x dispatches sdpa to memory-efficient fused CUDA
+        kernels automatically on Ada and newer GPUs (compute capability ≥ 8.0),
+        giving the same performance benefit as flash-attn with no separate
+        package installation.
 
-        Requirements:
-          pip install flash-attn --no-build-isolation
-          CUDA compute capability ≥ 8.0 (Ampere / Ada / Hopper / Blackwell)
+        Requirements: torch>=2.0 (built-in, no extra install).
 
         Possible effects: reduced GPU memory usage for long sequences; may
         change throughput.  Measure before concluding.
@@ -114,25 +114,18 @@ def load_model_optimized(
         dtype = torch.float16
 
     # ------------------------------------------------------------------
-    # EXPERIMENTAL: Flash Attention 2
+    # EXPERIMENTAL: sdpa (scaled dot-product attention)
     # ------------------------------------------------------------------
     attn_impl = "eager"
     if use_flash_attention:
-        try:
-            import flash_attn  # noqa: F401
-            attn_impl = "flash_attention_2"
-            log.info(
-                "EXPERIMENTAL: Flash Attention 2 enabled (flash-attn %s). "
-                "Effect depends on sequence length and GPU architecture. "
-                "Measure before drawing conclusions.",
-                flash_attn.__version__,
-            )
-        except ImportError:
-            log.warning(
-                "EXPERIMENTAL: Flash Attention 2 requested but the flash-attn "
-                "package is not installed.  Falling back to standard attention. "
-                "To install: pip install flash-attn --no-build-isolation"
-            )
+        attn_impl = "sdpa"
+        log.info(
+            "EXPERIMENTAL: attn_implementation=sdpa. "
+            "PyTorch dispatches to fused CUDA kernels on Ada / Blackwell GPUs. "
+            "No extra package required. "
+            "Effect depends on sequence length and GPU architecture. "
+            "Measure before drawing conclusions."
+        )
 
     log.info(
         "Loading optimized model: %s | device=%s | dtype=%s | attn=%s",

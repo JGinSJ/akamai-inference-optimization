@@ -8,19 +8,26 @@ terraform {
     }
   }
 
-  # TODO(open-question-1): Add a remote backend once CI/CD is in place.
-  # Akamai Object Storage (S3-compatible) example:
-  #
-  # backend "s3" {
-  #   bucket                      = "PLACEHOLDER-terraform-state"
-  #   key                         = "lke/terraform.tfstate"
-  #   region                      = "us-ord-1"
-  #   endpoint                    = "PLACEHOLDER.linodeobjects.com"
-  #   skip_credentials_validation = true
-  #   skip_metadata_api_check     = true
-  #   skip_region_validation      = true
-  #   force_path_style            = true
-  # }
+  # Remote state backend — Akamai Object Storage (S3-compatible).
+  # Credentials are passed via environment variables at terraform init time:
+  #   export AWS_ACCESS_KEY_ID="<object-storage-access-key>"
+  #   export AWS_SECRET_ACCESS_KEY="<object-storage-secret-key>"
+  # Never hardcode credentials here or in any committed file.
+  backend "s3" {
+    bucket = "inference-optimization"
+    key    = "terraform.tfstate"
+    region = "us-ord"
+
+    endpoints = {
+      s3 = "https://us-ord-1.linodeobjects.com"
+    }
+
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+    skip_region_validation      = true
+    skip_requesting_account_id  = true
+    use_path_style              = true
+  }
 }
 
 provider "linode" {

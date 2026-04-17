@@ -25,6 +25,12 @@ spec:
       nodeSelector:
         gpu-type: "rtx4000ada"
 
+      tolerations:
+      - key: "gpu-type"
+        operator: "Equal"
+        value: "rtx4000ada"
+        effect: "NoSchedule"
+
       containers:
         - name: benchmark
           # TODO: Build and push a harness image, or use a Python base image

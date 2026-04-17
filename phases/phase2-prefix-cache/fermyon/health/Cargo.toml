@@ -1,0 +1,11 @@
+[package]
+name        = "health"
+version     = "0.1.0"
+edition     = "2021"
+description = "Fermyon Wasm health check — Phase 2 /health handler"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+spin-sdk = "3.0"
